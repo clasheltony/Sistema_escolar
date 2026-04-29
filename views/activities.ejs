@@ -18,53 +18,63 @@
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="vistos-tab" data-bs-toggle="tab" data-bs-target="#vistos" type="button" role="tab">Lançar Vistos</button>
   </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="gerenciar-tab" data-bs-toggle="tab" data-bs-target="#gerenciar" type="button" role="tab">Gerenciar Lançamentos</button>
+  </li>
 </ul>
 
 <div class="tab-content">
   <!-- Aba Chamada -->
   <div class="tab-pane fade show active card p-4" id="chamada">
     <form action="/classes/<%= classInfo.id %>/activities/attendance" method="POST">
-      <div class="mb-3 w-25">
-        <label class="form-label fw-bold">Data da Aula</label>
-        <input type="date" name="date" class="form-control" required value="<%= new Date().toISOString().split('T')[0] %>" max="<%= new Date().toISOString().split('T')[0] %>">
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label class="form-label fw-bold">Data da Aula</label>
+          <input type="date" name="date" class="form-control" required value="<%= new Date().toISOString().split('T')[0] %>" max="<%= new Date().toISOString().split('T')[0] %>">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-bold">Quantidade de Aulas</label>
+          <select name="lessonCount" id="lessonCountSelect" class="form-select">
+            <% for(let i=1; i<=9; i++) { %>
+              <option value="<%= i %>" <%= i === 1 ? 'selected' : '' %>><%= i %> <%= i === 1 ? 'Aula' : 'Aulas' %></option>
+            <% } %>
+          </select>
+        </div>
       </div>
       
-      <table class="table align-middle">
-        <thead>
-          <tr>
-            <th>Aluno</th>
-            <th>1ª Aula</th>
-            <th>2ª Aula</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% students.forEach(function(s) { %>
+      <div class="table-responsive">
+        <table class="table align-middle" id="attendanceTable">
+          <thead>
             <tr>
-              <td class="fw-bold"><%= s.name %></td>
-              <td>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input" type="radio" name="attendance1[sid_<%= s.id %>]" value="Presente" checked>
-                  <label class="form-check-label text-success">Pres.</label>
-                </div>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input" type="radio" name="attendance1[sid_<%= s.id %>]" value="Ausente">
-                  <label class="form-check-label text-danger">Falta</label>
-                </div>
-              </td>
-              <td>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input" type="radio" name="attendance2[sid_<%= s.id %>]" value="Presente" checked>
-                  <label class="form-check-label text-success">Pres.</label>
-                </div>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input" type="radio" name="attendance2[sid_<%= s.id %>]" value="Ausente">
-                  <label class="form-check-label text-danger">Falta</label>
-                </div>
-              </td>
+              <th>Aluno</th>
+              <% for(let i=1; i<=9; i++) { %>
+                <th class="lesson-column lesson-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>><%= i %>ª Aula</th>
+              <% } %>
             </tr>
-          <% }); %>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <% students.forEach(function(s) { %>
+              <tr>
+                <td class="fw-bold text-nowrap"><%= s.name %></td>
+                <% for(let i=1; i<=9; i++) { %>
+                  <td class="lesson-column lesson-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>>
+                    <div class="d-flex flex-column gap-1">
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" value="Presente" checked>
+                        <label class="form-check-label text-success small">Pres.</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" value="Ausente">
+                        <label class="form-check-label text-danger small">Falta</label>
+                      </div>
+                    </div>
+                  </td>
+                <% } %>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
       <button type="submit" class="btn btn-primary mt-3">Salvar Chamada</button>
     </form>
   </div>
@@ -82,8 +92,16 @@
                 <% 
                   const d = new Date(date + 'T00:00:00'); 
                   const formattedDate = d.toLocaleDateString('pt-BR');
+                  const count = lessonsPerDate[date] || 1;
                 %>
-                <th><%= formattedDate %></th>
+                <th>
+                  <div class="mb-1"><%= formattedDate %></div>
+                  <div class="small text-muted mb-2"><%= count %> <%= count === 1 ? 'aula' : 'aulas' %></div>
+                  <form action="/classes/<%= classInfo.id %>/activities/attendance/delete" method="POST" onsubmit="return confirm('Excluir toda a chamada deste dia?');">
+                    <input type="hidden" name="date" value="<%= date %>">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir Chamada"><i class="bi bi-trash"></i></button>
+                  </form>
+                </th>
               <% }); %>
             <% } else { %>
               <th>Nenhuma chamada registrada</th>
@@ -93,16 +111,26 @@
         <tbody>
           <% students.forEach(function(s) { %>
             <tr>
-              <td class="text-start fw-bold"><%= s.name %></td>
+              <td class="text-start fw-bold text-nowrap"><%= s.name %></td>
               <% if (attendanceDates && attendanceDates.length > 0) { %>
                 <% attendanceDates.forEach(function(date) { %>
                   <td>
-                    <% const a1 = history[date] && history[date][s.id] ? history[date][s.id][1] : null; %>
-                    <% const a2 = history[date] && history[date][s.id] ? history[date][s.id][2] : null; %>
-                    
-                    <% if (a1 === 'Presente') { %> <i class="bi bi-check-circle-fill text-success"></i> <% } else if (a1 === 'Ausente') { %> <i class="bi bi-x-circle-fill text-danger"></i> <% } else { %> - <% } %>
-                    /
-                    <% if (a2 === 'Presente') { %> <i class="bi bi-check-circle-fill text-success"></i> <% } else if (a2 === 'Ausente') { %> <i class="bi bi-x-circle-fill text-danger"></i> <% } else { %> - <% } %>
+                    <div class="d-flex justify-content-center gap-1 flex-wrap">
+                      <% const count = lessonsPerDate[date] || 1; %>
+                      <% for(let l=1; l<=count; l++) { %>
+                        <% const status = history[date] && history[date][s.id] ? history[date][s.id][l] : null; %>
+                        <span title="<%= l %>ª Aula">
+                          <% if (status === 'Presente') { %> 
+                            <i class="bi bi-check-circle-fill text-success"></i> 
+                          <% } else if (status === 'Ausente') { %> 
+                            <i class="bi bi-x-circle-fill text-danger"></i> 
+                          <% } else { %> 
+                            <span class="text-muted" style="font-size: 0.7rem;">-</span> 
+                          <% } %>
+                        </span>
+                        <% if (l < count) { %><span class="text-muted">|</span><% } %>
+                      <% } %>
+                    </div>
                   </td>
                 <% }); %>
               <% } else { %>
@@ -114,6 +142,20 @@
       </table>
     </div>
   </div>
+
+  <script>
+    document.getElementById('lessonCountSelect').addEventListener('change', function() {
+      const count = parseInt(this.value);
+      document.querySelectorAll('.lesson-column').forEach(el => {
+        el.style.display = 'none';
+      });
+      for (let i = 1; i <= count; i++) {
+        document.querySelectorAll('.lesson-' + i).forEach(el => {
+          el.style.display = 'table-cell';
+        });
+      }
+    });
+  </script>
 
   <!-- Aba Notas -->
   <div class="tab-pane fade card p-4" id="notas">
@@ -193,6 +235,49 @@
       </table>
       <button type="submit" class="btn btn-info mt-3 text-white">Salvar Vistos</button>
     </form>
+  </div>
+
+  <!-- Aba Gerenciar -->
+  <div class="tab-pane fade card p-4" id="gerenciar">
+    <h4 class="mb-3">Gerenciar Notas e Vistos</h4>
+    <p class="text-muted small">Aqui você pode excluir atividades lançadas incorretamente.</p>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Nome da Atividade</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (locals.uniqueGrades && uniqueGrades.length > 0) { %>
+            <% uniqueGrades.forEach(function(g) { %>
+              <tr>
+                <td><%= new Date(g.date + 'T00:00:00').toLocaleDateString('pt-BR') %></td>
+                <td>
+                  <span class="badge <%= g.type === 'Nota' ? 'bg-primary' : 'bg-info text-white' %>">
+                    <%= g.type %>
+                  </span>
+                </td>
+                <td><%= g.activityName %></td>
+                <td class="text-end">
+                  <form action="/classes/<%= classInfo.id %>/activities/grade/delete" method="POST" class="d-inline" onsubmit="return confirm('Excluir todos os registros desta atividade?');">
+                    <input type="hidden" name="activityName" value="<%= g.activityName %>">
+                    <input type="hidden" name="type" value="<%= g.type %>">
+                    <input type="hidden" name="date" value="<%= g.date %>">
+                    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i> Excluir</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          <% } else { %>
+            <tr><td colspan="4" class="text-center text-muted">Nenhuma nota ou visto lançado.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
