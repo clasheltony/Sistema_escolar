@@ -60,12 +60,12 @@
                   <td class="lesson-column lesson-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>>
                     <div class="d-flex flex-column gap-1">
                       <div class="form-check">
-                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" value="Presente" checked>
-                        <label class="form-check-label text-success small">Pres.</label>
+                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" id="pres_<%= i %>_<%= s.id %>" value="Presente" checked>
+                        <label class="form-check-label text-success small" for="pres_<%= i %>_<%= s.id %>">Pres.</label>
                       </div>
                       <div class="form-check">
-                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" value="Ausente">
-                        <label class="form-check-label text-danger small">Falta</label>
+                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" id="abs_<%= i %>_<%= s.id %>" value="Ausente">
+                        <label class="form-check-label text-danger small" for="abs_<%= i %>_<%= s.id %>">Falta</label>
                       </div>
                     </div>
                   </td>
@@ -144,8 +144,9 @@
   </div>
 
   <script>
-    document.getElementById('lessonCountSelect').addEventListener('change', function() {
-      const count = parseInt(this.value);
+    function syncLessons() {
+      const select = document.getElementById('lessonCountSelect');
+      const count = parseInt(select.value);
       document.querySelectorAll('.lesson-column').forEach(el => {
         el.style.display = 'none';
       });
@@ -154,7 +155,13 @@
           el.style.display = 'table-cell';
         });
       }
-    });
+    }
+
+    // Run on change
+    document.getElementById('lessonCountSelect').addEventListener('change', syncLessons);
+    
+    // Run on page load
+    document.addEventListener('DOMContentLoaded', syncLessons);
   </script>
 
   <!-- Aba Notas -->

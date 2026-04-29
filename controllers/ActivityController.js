@@ -63,7 +63,7 @@ exports.postAttendance = async (req, res) => {
 
     // Attendance data structure: attendance[lessonNumber][studentId]
     for (let l = 1; l <= count; l++) {
-      const lessonData = attendance[l];
+      const lessonData = attendance ? attendance[l] : null;
       if (!lessonData) continue;
 
       for (const key in lessonData) {
