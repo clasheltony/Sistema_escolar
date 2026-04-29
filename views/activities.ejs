@@ -60,11 +60,11 @@
                   <td class="lesson-column lesson-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>>
                     <div class="d-flex flex-column gap-1">
                       <div class="form-check">
-                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" id="pres_<%= i %>_<%= s.id %>" value="Presente" checked>
+                        <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="pres_<%= i %>_<%= s.id %>" value="Presente" checked>
                         <label class="form-check-label text-success small" for="pres_<%= i %>_<%= s.id %>">Pres.</label>
                       </div>
                       <div class="form-check">
-                        <input class="form-check-input" type="radio" name="attendance[<%= i %>][sid_<%= s.id %>]" id="abs_<%= i %>_<%= s.id %>" value="Ausente">
+                        <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="abs_<%= i %>_<%= s.id %>" value="Ausente">
                         <label class="form-check-label text-danger small" for="abs_<%= i %>_<%= s.id %>">Falta</label>
                       </div>
                     </div>
@@ -195,7 +195,7 @@
             <tr>
               <td class="align-middle"><%= s.name %></td>
               <td>
-                <input type="number" step="0.1" max="10" name="grades[sid_<%= s.id %>]" class="form-control w-25" placeholder="Nota">
+                <input type="number" step="0.1" max="10" name="grade_<%= s.id %>" class="form-control w-25" placeholder="Nota">
               </td>
             </tr>
           <% }); %>
@@ -233,7 +233,7 @@
               <td class="align-middle"><%= s.name %></td>
               <td>
                 <div class="form-check mt-2">
-                  <input class="form-check-input border-secondary" type="checkbox" name="grades[sid_<%= s.id %>]" value="on" style="transform: scale(1.5);">
+                  <input class="form-check-input border-secondary" type="checkbox" name="grade_<%= s.id %>" value="on" style="transform: scale(1.5);">
                 </div>
               </td>
             </tr>

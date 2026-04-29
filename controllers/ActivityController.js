@@ -10,18 +10,22 @@ exports.getActivities = async (req, res) => {
 
     // Fetch attendance history
     const attendances = await Attendance.findAll({ where: { classId } });
-    const attendanceDates = [...new Set(attendances.map(a => a.date))].sort((a, b) => new Date(b) - new Date(a));
+    const attendanceDates = [...new Set(attendances.map(a => {
+      return typeof a.date === 'string' ? a.date : a.date.toISOString().split('T')[0];
+    }))].sort((a, b) => new Date(b) - new Date(a));
     
     const history = {};
     const lessonsPerDate = {};
     
     attendances.forEach(a => {
-      if (!history[a.date]) history[a.date] = {};
-      if (!history[a.date][a.studentId]) history[a.date][a.studentId] = {};
-      history[a.date][a.studentId][a.lessonNumber] = a.status;
+      const dateKey = typeof a.date === 'string' ? a.date : a.date.toISOString().split('T')[0];
       
-      if (!lessonsPerDate[a.date] || a.lessonNumber > lessonsPerDate[a.date]) {
-        lessonsPerDate[a.date] = a.lessonNumber;
+      if (!history[dateKey]) history[dateKey] = {};
+      if (!history[dateKey][a.studentId]) history[dateKey][a.studentId] = {};
+      history[dateKey][a.studentId][a.lessonNumber] = a.status;
+      
+      if (!lessonsPerDate[dateKey] || a.lessonNumber > lessonsPerDate[dateKey]) {
+        lessonsPerDate[dateKey] = a.lessonNumber;
       }
     });
 
@@ -51,34 +55,32 @@ exports.getActivities = async (req, res) => {
 exports.postAttendance = async (req, res) => {
   try {
     const classId = parseInt(req.params.classId);
-    const { date, lessonCount, attendance } = req.body;
+    const { date, lessonCount } = req.body;
     const count = parseInt(lessonCount) || 1;
-
-    if (!attendance || typeof attendance !== 'object') {
-      return res.status(400).send('Dados de chamada inválidos');
-    }
 
     // Delete existing attendance for this date and class before saving new ones (Overwriting)
     await Attendance.destroy({ where: { classId, date } });
 
-    // Attendance data structure: attendance[lessonNumber][studentId]
-    for (let l = 1; l <= count; l++) {
-      const lessonData = attendance ? attendance[l] : null;
-      if (!lessonData) continue;
+    const keys = Object.keys(req.body);
+    for (const key of keys) {
+      // Look for keys like "att_1_10" (att_lesson_studentId)
+      if (key.startsWith('att_')) {
+        const parts = key.split('_');
+        const l = parseInt(parts[1]);
+        const studentId = parseInt(parts[2]);
 
-      for (const key in lessonData) {
-        const studentId = parseInt(key.replace('sid_', ''));
-        if (isNaN(studentId)) continue;
-
-        const status = lessonData[key];
-
-        await Attendance.create({
-          date,
-          lessonNumber: l,
-          status: status,
-          studentId: studentId,
-          classId: classId
-        });
+        // Only save if lesson number is within the selected count
+        if (l <= count) {
+          const status = req.body[key] === 'Ausente' ? 'Ausente' : 'Presente';
+          
+          await Attendance.create({
+            date: date,
+            lessonNumber: l,
+            status: status,
+            studentId: studentId,
+            classId: classId
+          });
+        }
       }
     }
 
@@ -104,7 +106,7 @@ exports.deleteAttendance = async (req, res) => {
 exports.postGrade = async (req, res) => {
   try {
     const classId = parseInt(req.params.classId);
-    const { activityName, type, date, grades } = req.body;
+    const { activityName, type, date } = req.body;
 
     // Delete existing grades for this specific activity, type, and date (Overwriting)
     await Grade.destroy({ where: { classId, activityName, type, date } });
@@ -112,8 +114,8 @@ exports.postGrade = async (req, res) => {
     const students = await Student.findAll({ where: { classId } });
 
     for (const student of students) {
-      const key = `sid_${student.id}`;
-      const val = grades && grades[key] ? grades[key] : null;
+      const key = `grade_${student.id}`;
+      const val = req.body[key];
 
       if (type === 'Nota') {
         if (val !== null && val !== '') {
