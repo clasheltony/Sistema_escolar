@@ -1,0 +1,116 @@
+<%- include('header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Minhas Turmas</h2>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newClassModal">
+    <i class="bi bi-plus-circle"></i> Nova Turma
+  </button>
+</div>
+
+<div class="row">
+  <% if (classes.length > 0) { %>
+    <% classes.forEach(function(c) { %>
+      <div class="col-md-4 mb-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title"><%= c.name %></h5>
+            <h6 class="card-subtitle mb-2 text-muted"><%= c.subject || 'Sem disciplina especificada' %></h6>
+          </div>
+          <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
+            <a href="/classes/<%= c.id %>" class="btn btn-outline-primary btn-sm">Ver Alunos</a>
+            <a href="/classes/<%= c.id %>/activities" class="btn btn-outline-success btn-sm">Atividades</a>
+            <div>
+              <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#duplicateClassModal<%= c.id %>" title="Duplicar Turma"><i class="bi bi-files"></i></button>
+              <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editClassModal<%= c.id %>"><i class="bi bi-pencil"></i></button>
+              <form action="/classes/<%= c.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza?');">
+                <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Editar Turma -->
+      <div class="modal fade" id="editClassModal<%= c.id %>" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form action="/classes/<%= c.id %>/edit" method="POST">
+              <div class="modal-header">
+                <h5 class="modal-title">Editar Turma</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label>Nome da Turma</label>
+                  <input type="text" name="name" class="form-control" required value="<%= c.name %>">
+                </div>
+                <div class="mb-3">
+                  <label>Disciplina</label>
+                  <input type="text" name="subject" class="form-control" value="<%= c.subject %>">
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Duplicar Turma -->
+      <div class="modal fade" id="duplicateClassModal<%= c.id %>" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form action="/classes/<%= c.id %>/duplicate" method="POST">
+              <div class="modal-header">
+                <h5 class="modal-title">Duplicar Turma: <%= c.name %></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <p>Uma nova turma será criada com o nome <strong><%= c.name %></strong> e todos os alunos atuais serão copiados para ela.</p>
+                <div class="mb-3">
+                  <label>Nova Disciplina</label>
+                  <input type="text" name="newSubject" class="form-control" required placeholder="Ex: Física">
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-info text-white">Duplicar Turma</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+  <% } else { %>
+    <div class="col"><p class="text-muted">Nenhuma turma cadastrada.</p></div>
+  <% } %>
+</div>
+
+<!-- Modal Nova Turma -->
+<div class="modal fade" id="newClassModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="/classes" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Cadastrar Turma</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>Nome da Turma</label>
+            <input type="text" name="name" class="form-control" required placeholder="Ex: 7º Ano A">
+          </div>
+          <div class="mb-3">
+            <label>Disciplina</label>
+            <input type="text" name="subject" class="form-control" placeholder="Ex: Matemática">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('footer') %>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema Gestão Escolar</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body { background-color: #f8f9fa; }
+    .navbar { box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+    .card { box-shadow: 0 4px 6px rgba(0,0,0,.05); border: none; border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+  <% if (typeof teacherName !== 'undefined') { %>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+      <div class="container">
+        <a class="navbar-brand" href="/dashboard"><i class="bi bi-mortarboard-fill me-2"></i>EscolaOnline</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-toggle="target" aria-controls="navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/dashboard">Turmas</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/report">Relatório Geral</a>
+            </li>
+          </ul>
+          <span class="navbar-text text-light me-3">
+            Olá, <%= teacherName %>
+          </span>
+          <a href="/logout" class="btn btn-outline-light btn-sm">Sair</a>
+        </div>
+      </div>
+    </nav>
+  <% } %>
+
+  <div class="container">
+    <%- body %>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

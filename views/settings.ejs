@@ -1,0 +1,42 @@
+<%- include('header') %>
+
+<div class="mb-4">
+  <a href="/dashboard" class="btn btn-link text-decoration-none p-0 mb-2"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <h2>Configurações</h2>
+</div>
+
+<div class="card p-4 shadow-sm mb-4">
+  <h4 class="mb-3">Configuração de Bimestres</h4>
+  <p class="text-muted">Defina as datas de início e término de cada bimestre. O sistema usará essas datas para filtrar as chamadas e notas no Relatório Geral.</p>
+  
+  <form action="/settings/bimesters" method="POST">
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Bimestre</th>
+            <th>Data de Início</th>
+            <th>Data de Término</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% bimesters.forEach(function(b) { %>
+            <tr>
+              <td class="fw-bold"><%= b.name %></td>
+              <td>
+                <input type="hidden" name="bimesterIds[]" value="<%= b.id %>">
+                <input type="date" name="startDates[]" class="form-control" value="<%= b.startDate || '' %>">
+              </td>
+              <td>
+                <input type="date" name="endDates[]" class="form-control" value="<%= b.endDate || '' %>">
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Salvar Datas</button>
+  </form>
+</div>
+
+<%- include('footer') %>

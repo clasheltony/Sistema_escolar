@@ -1,0 +1,76 @@
+<%- include('header') %>
+
+<div class="mb-4 d-flex justify-content-between align-items-center">
+  <h2>Relatório Geral</h2>
+  <form action="/report" method="GET" class="d-flex w-75 justify-content-end">
+    <select name="classId" class="form-select me-2 w-50" onchange="this.form.submit()">
+      <% classes.forEach(function(c) { %>
+        <option value="<%= c.id %>" <%= (selectedClass && selectedClass.id === c.id) ? 'selected' : '' %>><%= c.name %></option>
+      <% }); %>
+      <% if (classes.length === 0) { %>
+        <option value="">Nenhuma turma disponível</option>
+      <% } %>
+    </select>
+    <select name="bimesterId" class="form-select w-50" onchange="this.form.submit()">
+      <option value="">Visão Geral (Ano Completo)</option>
+      <% bimesters.forEach(function(b) { %>
+        <option value="<%= b.id %>" <%= (selectedBimesterId == b.id) ? 'selected' : '' %>><%= b.name %></option>
+      <% }); %>
+    </select>
+  </form>
+</div>
+
+<% if (selectedClass) { %>
+  <div class="card p-4 shadow-sm">
+    <h4 class="mb-4">Boletim Consolidado - <%= selectedClass.name %></h4>
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Matrícula</th>
+            <th>Nome do Aluno</th>
+            <th>Frequência (%)</th>
+            <th>Vistos</th>
+            <th>Prova (AVI)</th>
+            <th>Prática</th>
+            <th>Av. Contínua</th>
+            <th>Média Final</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (reportData.length > 0) { %>
+            <% reportData.forEach(function(r) { %>
+              <% var isAprovado = parseFloat(r.mediaBimestral) >= 6 && parseFloat(r.attendanceRate) >= 75; %>
+              <tr>
+                <td><%= r.student.enrollment || '-' %></td>
+                <td class="fw-bold"><%= r.student.name %></td>
+                <td>
+                  <span class="badge bg-<%= parseFloat(r.attendanceRate) >= 75 ? 'success' : 'danger' %>"><%= r.attendanceRate %>%</span>
+                </td>
+                <td><%= r.vistoStatus %></td>
+                <td><%= r.notaAVI.toFixed(1) %></td>
+                <td><%= r.notaPratica.toFixed(1) %></td>
+                <td><span class="text-info fw-bold"><%= r.avaliacaoContinua.toFixed(1) %></span></td>
+                <td><span class="fs-5 <%= isAprovado ? 'text-success' : 'text-danger' %>"><%= r.mediaBimestral.toFixed(1) %></span></td>
+                <td>
+                  <% if (isAprovado) { %>
+                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Aprovado</span>
+                  <% } else { %>
+                    <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Reprovado</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          <% } else { %>
+            <tr><td colspan="6" class="text-center">Nenhum aluno ou dado registrado.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } else { %>
+  <p class="text-muted">Selecione uma turma para visualizar o relatório.</p>
+<% } %>
+
+<%- include('footer') %>
