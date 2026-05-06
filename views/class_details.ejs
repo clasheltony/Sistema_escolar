@@ -5,6 +5,122 @@
   <h2>Turma: <%= classInfo.name %> <span class="badge bg-secondary fs-6"><%= classInfo.subject %></span></h2>
 </div>
 
+<!-- Ações Rápidas -->
+<div class="d-flex gap-2 mb-4">
+  <a href="/classes/<%= classInfo.id %>/activities" class="btn btn-outline-secondary">
+    <i class="bi bi-graph-up"></i> Notas e Vistos
+  </a>
+</div>
+
+<!-- Chamada Diária -->
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h5 class="mb-0"><i class="bi bi-clipboard-check text-primary me-2"></i>Chamada Diária</h5>
+    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttendance" aria-expanded="true">
+      <i class="bi bi-chevron-up" id="chevronIcon"></i>
+    </button>
+  </div>
+  <div class="collapse show" id="collapseAttendance">
+    <div class="card-body">
+      <% if (students.length === 0) { %>
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-info-circle me-2"></i>Adicione alunos à turma para poder fazer a chamada.
+        </div>
+      <% } else { %>
+        <form action="/classes/<%= classInfo.id %>/activities/attendance" method="POST">
+          <input type="hidden" name="source" value="class_details">
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Data da Aula</label>
+              <input type="date" name="date" class="form-control" required
+                value="<%= new Date().toISOString().split('T')[0] %>"
+                max="<%= new Date().toISOString().split('T')[0] %>">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Qtd. de Aulas</label>
+              <select name="lessonCount" id="lessonCountSelectCD" class="form-select">
+                <% for(let i=1; i<=9; i++) { %>
+                  <option value="<%= i %>" <%= i === 1 ? 'selected' : '' %>><%= i %> <%= i === 1 ? 'Aula' : 'Aulas' %></option>
+                <% } %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Tema da Aula <span class="text-muted fw-normal">(opcional)</span></label>
+              <input type="text" name="lessonTopic" class="form-control" placeholder="Ex: Frações, Revolução Francesa, Funções..." maxlength="200">
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle" id="attendanceTableCD">
+              <thead class="table-light">
+                <tr>
+                  <th>Aluno</th>
+                  <% for(let i=1; i<=9; i++) { %>
+                    <th class="lesson-col-cd lesson-cd-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>><%= i %>ª Aula</th>
+                  <% } %>
+                </tr>
+              </thead>
+              <tbody>
+                <% students.forEach(function(s) { %>
+                  <tr>
+                    <td class="fw-bold text-nowrap"><%= s.name %></td>
+                    <% for(let i=1; i<=9; i++) { %>
+                      <td class="lesson-col-cd lesson-cd-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>>
+                        <div class="d-flex flex-column gap-1">
+                          <div class="form-check">
+                            <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="cd_pres_<%= i %>_<%= s.id %>" value="Presente" checked>
+                            <label class="form-check-label text-success small" for="cd_pres_<%= i %>_<%= s.id %>">Pres.</label>
+                          </div>
+                          <div class="form-check">
+                            <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="cd_abs_<%= i %>_<%= s.id %>" value="Ausente">
+                            <label class="form-check-label text-danger small" for="cd_abs_<%= i %>_<%= s.id %>">Falta</label>
+                          </div>
+                        </div>
+                      </td>
+                    <% } %>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-clipboard-check me-1"></i>Salvar Chamada
+            </button>
+            <a href="/classes/<%= classInfo.id %>/activities" class="btn btn-outline-primary">
+              <i class="bi bi-clock-history me-1"></i>Ver Histórico
+            </a>
+          </div>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const select = document.getElementById('lessonCountSelectCD');
+    if (!select) return;
+    function syncCD() {
+      const count = parseInt(select.value);
+      document.querySelectorAll('.lesson-col-cd').forEach(el => el.style.display = 'none');
+      for (let i = 1; i <= count; i++) {
+        document.querySelectorAll('.lesson-cd-' + i).forEach(el => el.style.display = 'table-cell');
+      }
+    }
+    select.addEventListener('change', syncCD);
+    syncCD();
+
+    // Toggle chevron icon
+    const collapse = document.getElementById('collapseAttendance');
+    const chevron = document.getElementById('chevronIcon');
+    if (collapse && chevron) {
+      collapse.addEventListener('hide.bs.collapse', () => { chevron.className = 'bi bi-chevron-down'; });
+      collapse.addEventListener('show.bs.collapse', () => { chevron.className = 'bi bi-chevron-up'; });
+    }
+  })();
+</script>
+
 <div class="card mb-4 p-4">
   <h4 class="mb-3">Adicionar Aluno</h4>
   <form action="/classes/<%= classInfo.id %>/students" method="POST" class="row g-3">

@@ -13,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('Presente', 'Ausente'),
       allowNull: false,
       defaultValue: 'Presente'
+    },
+    lessonTopic: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   });
   return Attendance;

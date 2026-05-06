@@ -16,6 +16,7 @@ exports.getActivities = async (req, res) => {
     
     const history = {};
     const lessonsPerDate = {};
+    const topicsPerDate = {};
     
     attendances.forEach(a => {
       const dateKey = typeof a.date === 'string' ? a.date : a.date.toISOString().split('T')[0];
@@ -26,6 +27,10 @@ exports.getActivities = async (req, res) => {
       
       if (!lessonsPerDate[dateKey] || a.lessonNumber > lessonsPerDate[dateKey]) {
         lessonsPerDate[dateKey] = a.lessonNumber;
+      }
+
+      if (a.lessonTopic && !topicsPerDate[dateKey]) {
+        topicsPerDate[dateKey] = a.lessonTopic;
       }
     });
 
@@ -44,6 +49,7 @@ exports.getActivities = async (req, res) => {
       attendanceDates,
       history,
       lessonsPerDate,
+      topicsPerDate,
       uniqueGrades: uniqueGrades || []
     });
   } catch (err) {
@@ -55,8 +61,9 @@ exports.getActivities = async (req, res) => {
 exports.postAttendance = async (req, res) => {
   try {
     const classId = parseInt(req.params.classId);
-    const { date, lessonCount } = req.body;
+    const { date, lessonCount, lessonTopic, source } = req.body;
     const count = parseInt(lessonCount) || 1;
+    const topic = (lessonTopic || '').trim();
 
     // Delete existing attendance for this date and class before saving new ones (Overwriting)
     await Attendance.destroy({ where: { classId, date } });
@@ -77,6 +84,7 @@ exports.postAttendance = async (req, res) => {
             date: date,
             lessonNumber: l,
             status: status,
+            lessonTopic: topic || null,
             studentId: studentId,
             classId: classId
           });
@@ -84,6 +92,10 @@ exports.postAttendance = async (req, res) => {
       }
     }
 
+    // Redirect back to origin if submitted from class_details
+    if (source === 'class_details') {
+      return res.redirect(`/classes/${classId}`);
+    }
     res.redirect(`/classes/${classId}/activities`);
   } catch (err) {
     console.error('postAttendance error:', err);

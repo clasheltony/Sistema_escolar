@@ -16,10 +16,18 @@
             <h5 class="card-title"><%= c.name %></h5>
             <h6 class="card-subtitle mb-2 text-muted"><%= c.subject || 'Sem disciplina especificada' %></h6>
           </div>
-          <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
-            <a href="/classes/<%= c.id %>" class="btn btn-outline-primary btn-sm">Ver Alunos</a>
-            <a href="/classes/<%= c.id %>/activities" class="btn btn-outline-success btn-sm">Atividades</a>
-            <div>
+          <div class="card-footer bg-white border-top-0">
+            <div class="d-grid gap-2 mb-2">
+              <a href="/classes/<%= c.id %>" class="btn btn-primary">
+                <i class="bi bi-clipboard-check me-1"></i> Fazer Chamada
+              </a>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="btn-group">
+                <a href="/classes/<%= c.id %>" class="btn btn-outline-primary btn-sm">Alunos</a>
+                <a href="/classes/<%= c.id %>/activities" class="btn btn-outline-success btn-sm">Atividades</a>
+              </div>
+              <div class="d-flex gap-1">
               <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#duplicateClassModal<%= c.id %>" title="Duplicar Turma"><i class="bi bi-files"></i></button>
               <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editClassModal<%= c.id %>"><i class="bi bi-pencil"></i></button>
               <form action="/classes/<%= c.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza?');">

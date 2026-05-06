@@ -40,6 +40,10 @@
             <% } %>
           </select>
         </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold">Tema da Aula <span class="text-muted fw-normal">(opcional)</span></label>
+          <input type="text" name="lessonTopic" class="form-control" placeholder="Ex: Frações, Revolução Francesa, Funções..." maxlength="200">
+        </div>
       </div>
       
       <div class="table-responsive">
@@ -96,7 +100,14 @@
                 %>
                 <th>
                   <div class="mb-1"><%= formattedDate %></div>
-                  <div class="small text-muted mb-2"><%= count %> <%= count === 1 ? 'aula' : 'aulas' %></div>
+                  <div class="small text-muted mb-1"><%= count %> <%= count === 1 ? 'aula' : 'aulas' %></div>
+                  <% if (topicsPerDate && topicsPerDate[date]) { %>
+                    <div class="small text-primary fw-semibold mb-2" title="Tema da aula">
+                      <i class="bi bi-journal-bookmark"></i> <%= topicsPerDate[date] %>
+                    </div>
+                  <% } else { %>
+                    <div class="mb-2"></div>
+                  <% } %>
                   <form action="/classes/<%= classInfo.id %>/activities/attendance/delete" method="POST" onsubmit="return confirm('Excluir toda a chamada deste dia?');">
                     <input type="hidden" name="date" value="<%= date %>">
                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir Chamada"><i class="bi bi-trash"></i></button>
