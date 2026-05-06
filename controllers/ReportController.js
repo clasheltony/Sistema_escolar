@@ -64,15 +64,15 @@ exports.getReport = async (req, res) => {
           }
         });
         
-        const notaAVI = countAVI > 0 ? (sumAVI / countAVI) : 0;
-        const notaPratica = countPratica > 0 ? (sumPratica / countPratica) : 0;
+        const notaAVI = Math.round(countAVI > 0 ? (sumAVI / countAVI) : 0);
+        const notaPratica = Math.round(countPratica > 0 ? (sumPratica / countPratica) : 0);
         const notaParticipacao = countParticipacao > 0 ? (sumParticipacao / countParticipacao) : 0;
 
         const notaFrequencia = (parseFloat(attendanceRate) / 100) * 10;
         const notaVistos = totalVistos > 0 ? (earnedVistos / totalVistos) * 10 : 0;
 
-        const avaliacaoContinua = (notaFrequencia + notaVistos + notaParticipacao) / 3;
-        const mediaBimestral = (notaAVI + notaPratica + avaliacaoContinua) / 3;
+        const avaliacaoContinua = Math.round((notaFrequencia + notaVistos + notaParticipacao) / 3);
+        const mediaBimestral = Math.round((notaAVI + notaPratica + avaliacaoContinua) / 3);
 
         reportData.push({
           student,
