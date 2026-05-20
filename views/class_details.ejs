@@ -62,17 +62,22 @@
               </thead>
               <tbody>
                 <% students.forEach(function(s) { %>
-                  <tr>
-                    <td class="fw-bold text-nowrap"><%= s.name %></td>
+                  <tr class="<%= !s.active ? 'opacity-75 bg-light' : '' %>">
+                    <td class="fw-bold text-nowrap <%= !s.active ? 'text-decoration-line-through text-muted' : '' %>">
+                      <%= s.name %>
+                      <% if (!s.active) { %>
+                        <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                      <% } %>
+                    </td>
                     <% for(let i=1; i<=9; i++) { %>
                       <td class="lesson-col-cd lesson-cd-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>>
                         <div class="d-flex flex-column gap-1">
                           <div class="form-check">
-                            <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="cd_pres_<%= i %>_<%= s.id %>" value="Presente" checked>
+                            <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="cd_pres_<%= i %>_<%= s.id %>" value="Presente" <%= s.active ? 'checked' : 'disabled' %>>
                             <label class="form-check-label text-success small" for="cd_pres_<%= i %>_<%= s.id %>">Pres.</label>
                           </div>
                           <div class="form-check">
-                            <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="cd_abs_<%= i %>_<%= s.id %>" value="Ausente">
+                            <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="cd_abs_<%= i %>_<%= s.id %>" value="Ausente" <%= s.active ? '' : 'disabled' %>>
                             <label class="form-check-label text-danger small" for="cd_abs_<%= i %>_<%= s.id %>">Falta</label>
                           </div>
                         </div>
@@ -150,8 +155,13 @@
       <tbody>
         <% if (students.length > 0) { %>
           <% students.forEach(function(s) { %>
-            <tr>
-              <td><%= s.name %></td>
+            <tr class="<%= !s.active ? 'opacity-75 bg-light' : '' %>">
+              <td class="<%= !s.active ? 'text-decoration-line-through text-muted fw-normal' : 'fw-bold' %>">
+                <%= s.name %>
+                <% if (!s.active) { %>
+                  <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                <% } %>
+              </td>
               <td><%= s.enrollment || '-' %></td>
               <td class="text-end">
                 <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudentModal<%= s.id %>"><i class="bi bi-pencil"></i></button>
@@ -176,6 +186,11 @@
                           <div class="mb-3">
                             <label>Matrícula</label>
                             <input type="text" name="enrollment" class="form-control" value="<%= s.enrollment %>">
+                          </div>
+                          <div class="form-check form-switch mb-3 mt-3">
+                            <input class="form-check-input" type="checkbox" name="active" id="active_<%= s.id %>" <%= s.active !== false ? 'checked' : '' %>>
+                            <label class="form-check-label fw-bold animate-pulse" for="active_<%= s.id %>">Aluno Ativo</label>
+                            <div class="form-text small text-muted">Desative para marcar o aluno como transferido. Ele continuará na turma, mas sem novos lançamentos, e ficará no final da lista.</div>
                           </div>
                         </div>
                         <div class="modal-footer">

@@ -31,7 +31,7 @@ app.use('/', routes);
 // Sincronizar Banco e Iniciar Servidor
 const PORT = process.env.PORT || 3000;
 
-const syncOptions = process.env.DATABASE_URL ? { force: false } : { alter: true };
+const syncOptions = { alter: true };
 sequelize.sync(syncOptions).then(async () => {
   console.log('Banco de dados sincronizado');
   

@@ -26,8 +26,9 @@ exports.deleteStudent = async (req, res) => {
 exports.updateStudent = async (req, res) => {
   try {
     const { classId, studentId } = req.params;
-    const { name, enrollment } = req.body;
-    await Student.update({ name, enrollment }, { where: { id: studentId, classId } });
+    const { name, enrollment, active } = req.body;
+    const isActive = active === 'on' || active === true || active === 'true';
+    await Student.update({ name, enrollment, active: isActive }, { where: { id: studentId, classId } });
     res.redirect(`/classes/${classId}`);
   } catch (err) {
     console.error(err);

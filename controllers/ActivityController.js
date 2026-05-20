@@ -6,7 +6,10 @@ exports.getActivities = async (req, res) => {
     const classInfo = await Class.findOne({ where: { id: classId, teacherId: req.session.teacherId } });
     if (!classInfo) return res.status(404).send('Turma não encontrada');
 
-    const students = await Student.findAll({ where: { classId } });
+    const students = await Student.findAll({ 
+      where: { classId },
+      order: [['active', 'DESC'], ['name', 'ASC']]
+    });
 
     // Fetch attendance history
     const attendances = await Attendance.findAll({ where: { classId } });
@@ -126,6 +129,8 @@ exports.postGrade = async (req, res) => {
     const students = await Student.findAll({ where: { classId } });
 
     for (const student of students) {
+      if (student.active === false) continue;
+      
       const key = `grade_${student.id}`;
       const val = req.body[key];
 

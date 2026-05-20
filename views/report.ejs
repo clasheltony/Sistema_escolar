@@ -52,9 +52,14 @@
           <% if (reportData.length > 0) { %>
             <% reportData.forEach(function(r) { %>
               <% var isAprovado = parseFloat(r.mediaBimestral) >= 6 && parseFloat(r.attendanceRate) >= 75; %>
-              <tr>
+              <tr class="<%= !r.student.active ? 'opacity-75 bg-light' : '' %>">
                 <td><%= r.student.enrollment || '-' %></td>
-                <td class="fw-bold"><%= r.student.name %></td>
+                <td class="fw-bold <%= !r.student.active ? 'text-decoration-line-through text-muted' : '' %>">
+                  <%= r.student.name %>
+                  <% if (!r.student.active) { %>
+                    <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                  <% } %>
+                </td>
                 <td>
                   <span class="badge bg-<%= parseFloat(r.attendanceRate) >= 75 ? 'success' : 'danger' %>"><%= r.attendanceRate %>%</span>
                 </td>

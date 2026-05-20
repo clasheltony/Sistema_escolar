@@ -28,7 +28,10 @@ exports.getReport = async (req, res) => {
 
     if (classId) {
       selectedClass = await Class.findByPk(classId);
-      const students = await Student.findAll({ where: { classId } });
+      const students = await Student.findAll({ 
+        where: { classId },
+        order: [['active', 'DESC'], ['name', 'ASC']]
+      });
       
       for (const student of students) {
         // Fetch attendances with date filter

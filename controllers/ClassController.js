@@ -83,7 +83,10 @@ exports.getClassDetails = async (req, res) => {
     const classInfo = await Class.findOne({ where: { id, teacherId: req.session.teacherId } });
     if (!classInfo) return res.status(404).send('Turma não encontrada');
 
-    const students = await Student.findAll({ where: { classId: id } });
+    const students = await Student.findAll({ 
+      where: { classId: id },
+      order: [['active', 'DESC'], ['name', 'ASC']]
+    });
     res.render('class_details', { classInfo, students, teacherName: req.session.teacherName });
   } catch (err) {
     console.error(err);

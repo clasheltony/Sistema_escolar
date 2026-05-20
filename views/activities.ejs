@@ -1,5 +1,33 @@
 <%- include('header') %>
 
+<style>
+  /* Estilo para travar a primeira coluna (Aluno) no Histórico de Chamadas */
+  .table-responsive-sticky {
+    max-height: 650px;
+    overflow: auto;
+    position: relative;
+  }
+  
+  .table-sticky th:first-child,
+  .table-sticky td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #ffffff !important;
+    z-index: 10;
+    box-shadow: 3px 0 6px rgba(0,0,0,0.08);
+  }
+  
+  .table-sticky th:first-child {
+    z-index: 15;
+    background-color: #f8f9fa !important;
+  }
+
+  /* Manter background cinza sólido para linhas de alunos inativos */
+  .table-sticky tr.bg-light td:first-child {
+    background-color: #f8f9fa !important;
+  }
+</style>
+
 <div class="mb-4">
   <a href="/dashboard" class="btn btn-link text-decoration-none p-0 mb-2"><i class="bi bi-arrow-left"></i> Voltar</a>
   <h2>Atividades e Chamada: <%= classInfo.name %></h2>
@@ -58,17 +86,22 @@
           </thead>
           <tbody>
             <% students.forEach(function(s) { %>
-              <tr>
-                <td class="fw-bold text-nowrap"><%= s.name %></td>
+              <tr class="<%= !s.active ? 'opacity-75 bg-light' : '' %>">
+                <td class="fw-bold text-nowrap <%= !s.active ? 'text-decoration-line-through text-muted' : '' %>">
+                  <%= s.name %>
+                  <% if (!s.active) { %>
+                    <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                  <% } %>
+                </td>
                 <% for(let i=1; i<=9; i++) { %>
                   <td class="lesson-column lesson-<%= i %>" <%= i > 1 ? 'style="display:none"' : '' %>>
                     <div class="d-flex flex-column gap-1">
                       <div class="form-check">
-                        <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="pres_<%= i %>_<%= s.id %>" value="Presente" checked>
+                        <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="pres_<%= i %>_<%= s.id %>" value="Presente" <%= s.active ? 'checked' : 'disabled' %>>
                         <label class="form-check-label text-success small" for="pres_<%= i %>_<%= s.id %>">Pres.</label>
                       </div>
                       <div class="form-check">
-                        <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="abs_<%= i %>_<%= s.id %>" value="Ausente">
+                        <input class="form-check-input" type="radio" name="att_<%= i %>_<%= s.id %>" id="abs_<%= i %>_<%= s.id %>" value="Ausente" <%= s.active ? '' : 'disabled' %>>
                         <label class="form-check-label text-danger small" for="abs_<%= i %>_<%= s.id %>">Falta</label>
                       </div>
                     </div>
@@ -85,9 +118,16 @@
 
   <!-- Aba Histórico de Chamadas -->
   <div class="tab-pane fade card p-4" id="historico">
-    <h4 class="mb-3">Histórico de Chamadas</h4>
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover text-center align-middle">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="mb-0">Histórico de Chamadas</h4>
+      <% if (attendanceDates && attendanceDates.length > 0) { %>
+        <button onclick="exportAttendanceToExcel()" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1">
+          <i class="bi bi-file-earmark-excel"></i> Exportar Histórico (Excel)
+        </button>
+      <% } %>
+    </div>
+    <div class="table-responsive table-responsive-sticky">
+      <table class="table table-bordered table-hover text-center align-middle table-sticky" id="attendanceHistoryTable">
         <thead class="table-light">
           <tr>
             <th class="text-start">Aluno</th>
@@ -121,8 +161,13 @@
         </thead>
         <tbody>
           <% students.forEach(function(s) { %>
-            <tr>
-              <td class="text-start fw-bold text-nowrap"><%= s.name %></td>
+            <tr class="<%= !s.active ? 'opacity-75 bg-light' : '' %>">
+              <td class="text-start fw-bold text-nowrap <%= !s.active ? 'text-decoration-line-through text-muted' : '' %>">
+                <%= s.name %>
+                <% if (!s.active) { %>
+                  <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                <% } %>
+              </td>
               <% if (attendanceDates && attendanceDates.length > 0) { %>
                 <% attendanceDates.forEach(function(date) { %>
                   <td>
@@ -203,10 +248,15 @@
         </thead>
         <tbody>
           <% students.forEach(function(s) { %>
-            <tr>
-              <td class="align-middle"><%= s.name %></td>
+            <tr class="<%= !s.active ? 'opacity-75 bg-light' : '' %>">
+              <td class="align-middle <%= !s.active ? 'text-decoration-line-through text-muted' : '' %>">
+                <%= s.name %>
+                <% if (!s.active) { %>
+                  <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                <% } %>
+              </td>
               <td>
-                <input type="number" step="0.1" max="10" name="grade_<%= s.id %>" class="form-control w-25" placeholder="Nota">
+                <input type="number" step="0.1" max="10" name="grade_<%= s.id %>" class="form-control w-25" placeholder="Nota" <%= s.active ? '' : 'disabled' %>>
               </td>
             </tr>
           <% }); %>
@@ -240,11 +290,16 @@
         </thead>
         <tbody>
           <% students.forEach(function(s) { %>
-            <tr>
-              <td class="align-middle"><%= s.name %></td>
+            <tr class="<%= !s.active ? 'opacity-75 bg-light' : '' %>">
+              <td class="align-middle <%= !s.active ? 'text-decoration-line-through text-muted' : '' %>">
+                <%= s.name %>
+                <% if (!s.active) { %>
+                  <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                <% } %>
+              </td>
               <td>
                 <div class="form-check mt-2">
-                  <input class="form-check-input border-secondary" type="checkbox" name="grade_<%= s.id %>" value="on" style="transform: scale(1.5);">
+                  <input class="form-check-input border-secondary" type="checkbox" name="grade_<%= s.id %>" value="on" style="transform: scale(1.5);" <%= s.active ? '' : 'disabled' %>>
                 </div>
               </td>
             </tr>
@@ -298,5 +353,39 @@
     </div>
   </div>
 </div>
+
+<!-- Scripts de Exportação e Dependências -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+  function exportAttendanceToExcel() {
+    const table = document.getElementById('attendanceHistoryTable');
+    if (!table) return;
+
+    const className = <%- JSON.stringify(classInfo ? classInfo.name : "Turma") %>;
+    const filename = `Historico_Chamadas_${className.replace(/\s+/g, '_')}.xlsx`;
+
+    // Clonar a tabela para manipular e exportar sem afetar o front-end
+    const clonedTable = table.cloneNode(true);
+    
+    // Remover formulários e botões de exclusão que ficam no cabeçalho
+    clonedTable.querySelectorAll('form').forEach(form => form.remove());
+    
+    // Substituir ícones de check-circle-fill e x-circle-fill por texto 'P' e 'F'
+    clonedTable.querySelectorAll('span[title*="Aula"]').forEach(span => {
+      const hasCheck = span.querySelector('.text-success');
+      const hasX = span.querySelector('.text-danger');
+      if (hasCheck) {
+        span.innerText = 'P';
+      } else if (hasX) {
+        span.innerText = 'F';
+      } else {
+        span.innerText = '-';
+      }
+    });
+
+    const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Histórico de Chamadas" });
+    XLSX.writeFile(wb, filename);
+  }
+</script>
 
 <%- include('footer') %>
