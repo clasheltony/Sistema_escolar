@@ -10,6 +10,9 @@
   <a href="/classes/<%= classInfo.id %>/activities" class="btn btn-outline-secondary">
     <i class="bi bi-graph-up"></i> Notas e Vistos
   </a>
+  <a href="/report?classId=<%= classInfo.id %>" class="btn btn-outline-info">
+    <i class="bi bi-bar-chart"></i> Relatório
+  </a>
 </div>
 
 <!-- Chamada Diária -->
@@ -165,6 +168,7 @@
               <td><%= s.enrollment || '-' %></td>
               <td class="text-end">
                 <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editStudentModal<%= s.id %>"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#transferStudentModal<%= s.id %>"><i class="bi bi-arrow-left-right"></i></button>
                 <form action="/classes/<%= classInfo.id %>/students/<%= s.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Remover aluno?');">
                   <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                 </form>
@@ -195,6 +199,36 @@
                         </div>
                         <div class="modal-footer">
                           <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Modal Transferir Aluno -->
+                <div class="modal fade" id="transferStudentModal<%= s.id %>" tabindex="-1">
+                  <div class="modal-dialog">
+                    <div class="modal-content text-start">
+                      <form action="/classes/<%= classInfo.id %>/students/<%= s.id %>/transfer" method="POST">
+                        <div class="modal-header">
+                          <h5 class="modal-title">Transferir Aluno</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          <p class="mb-3">Transferir <strong><%= s.name %></strong> para qual turma?</p>
+                          <p class="small text-muted">Todas as notas, frequências e dados do aluno serão mantidos.</p>
+                          <div class="mb-3">
+                            <label class="form-label">Turma de Destino</label>
+                            <select name="targetClassId" class="form-select" required>
+                              <option value="">Selecione uma turma...</option>
+                              <% otherClasses.forEach(function(c) { %>
+                                <option value="<%= c.id %>"><%= c.name %> <%= c.subject ? '- ' + c.subject : '' %></option>
+                              <% }); %>
+                            </select>
+                          </div>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="submit" class="btn btn-info text-white"><i class="bi bi-arrow-left-right me-1"></i>Transferir</button>
                         </div>
                       </form>
                     </div>

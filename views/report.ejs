@@ -11,8 +11,13 @@
         <option value="">Nenhuma turma disponível</option>
       <% } %>
     </select>
-    <select name="bimesterId" class="form-select w-50" onchange="this.form.submit()">
-      <option value="">Visão Geral (Ano Completo)</option>
+    <select name="semester" class="form-select me-2 w-auto" onchange="this.form.submit()">
+      <option value="">Período</option>
+      <option value="1" <%= (selectedSemester === '1') ? 'selected' : '' %>>1º Semestre</option>
+      <option value="2" <%= (selectedSemester === '2') ? 'selected' : '' %>>2º Semestre</option>
+    </select>
+    <select name="bimesterId" class="form-select w-auto" onchange="this.form.submit()">
+      <option value="">Bimestre (específico)</option>
       <% bimesters.forEach(function(b) { %>
         <option value="<%= b.id %>" <%= (selectedBimesterId == b.id) ? 'selected' : '' %>><%= b.name %></option>
       <% }); %>
@@ -23,7 +28,10 @@
 <% if (selectedClass) { %>
   <div class="card p-4 shadow-sm" id="report-card">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-      <h4 class="mb-0">Boletim Consolidado - <%= selectedClass.name %></h4>
+      <h4 class="mb-0">Boletim Consolidado - <%= selectedClass.name %>
+        <% if (selectedSemester === '1') { %><span class="badge bg-info fs-6 ms-2">1º Semestre</span><% } %>
+        <% if (selectedSemester === '2') { %><span class="badge bg-info fs-6 ms-2">2º Semestre</span><% } %>
+      </h4>
       <div data-html2pdf-ignore="true">
         <button onclick="exportToExcel()" class="btn btn-outline-success btn-sm me-2 d-inline-flex align-items-center gap-1">
           <i class="bi bi-file-earmark-excel"></i> Exportar Excel
@@ -36,6 +44,21 @@
     <div class="table-responsive">
       <table class="table table-striped table-hover align-middle">
         <thead class="table-dark">
+          <% if (selectedSemester) { %>
+          <tr>
+            <th>Matrícula</th>
+            <th>Nome do Aluno</th>
+            <th>Freq. 1º Bim (%)</th>
+            <th>Freq. 2º Bim (%)</th>
+            <th>Média Freq. (%)</th>
+            <th>AVI 1º Bim</th>
+            <th>AVI 2º Bim</th>
+            <th>Média 1º Bim</th>
+            <th>Média 2º Bim</th>
+            <th>Média Semestral</th>
+            <th>Status</th>
+          </tr>
+          <% } else { %>
           <tr>
             <th>Matrícula</th>
             <th>Nome do Aluno</th>
@@ -48,45 +71,76 @@
             <th>Média Final</th>
             <th>Status</th>
           </tr>
+          <% } %>
         </thead>
         <tbody>
           <% if (reportData.length > 0) { %>
             <% reportData.forEach(function(r) { %>
-              <% var isAprovado = parseFloat(r.mediaBimestral) >= 6 && parseFloat(r.attendanceRate) >= 75; %>
-              <tr class="<%= !r.student.active ? 'opacity-75 bg-light' : '' %>">
-                <td><%= r.student.enrollment || '-' %></td>
-                <td class="fw-bold <%= !r.student.active ? 'text-decoration-line-through text-muted' : '' %>">
-                  <%= r.student.name %>
-                  <% if (!r.student.active) { %>
-                    <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
-                  <% } %>
-                </td>
-                <td>
-                  <span class="badge bg-<%= parseFloat(r.attendanceRate) >= 75 ? 'success' : 'danger' %>"><%= r.attendanceRate %>%</span>
-                </td>
-                <td><%= r.vistoStatus %></td>
-                <td><%= r.notaAVI.toFixed(1) %></td>
-                <td>
-                  <% if (r.notaRecuperacao !== null) { %>
-                    <span class="fw-bold text-primary"><%= r.notaRecuperacao.toFixed(1) %></span>
-                  <% } else { %>
-                    <span class="text-muted small">—</span>
-                  <% } %>
-                </td>
-                <td><%= r.notaPratica.toFixed(1) %></td>
-                <td><span class="text-info fw-bold"><%= r.avaliacaoContinua.toFixed(1) %></span></td>
-                <td><span class="fs-5 <%= isAprovado ? 'text-success' : 'text-danger' %>"><%= r.mediaBimestral.toFixed(1) %></span></td>
-                <td>
-                  <% if (isAprovado) { %>
-                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Aprovado</span>
-                  <% } else { %>
-                    <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Reprovado</span>
-                  <% } %>
-                </td>
-              </tr>
+              <% if (selectedSemester) { %>
+                <% var isAprovado = parseFloat(r.semesterAverage) >= 6 && parseFloat(r.attendanceAvg) >= 75; %>
+                <tr class="<%= !r.student.active ? 'opacity-75 bg-light' : '' %>">
+                  <td><%= r.student.enrollment || '-' %></td>
+                  <td class="fw-bold <%= !r.student.active ? 'text-decoration-line-through text-muted' : '' %>">
+                    <%= r.student.name %>
+                    <% if (!r.student.active) { %>
+                      <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                    <% } %>
+                  </td>
+                  <td><%= r.b1.attendanceRate %>%</td>
+                  <td><%= r.b2.attendanceRate %>%</td>
+                  <td>
+                    <span class="badge bg-<%= parseFloat(r.attendanceAvg) >= 75 ? 'success' : 'danger' %>"><%= r.attendanceAvg %>%</span>
+                  </td>
+                  <td><%= r.b1.notaAVIFinal.toFixed(1) %></td>
+                  <td><%= r.b2.notaAVIFinal.toFixed(1) %></td>
+                  <td><%= r.b1.mediaBimestral.toFixed(1) %></td>
+                  <td><%= r.b2.mediaBimestral.toFixed(1) %></td>
+                  <td><span class="fs-5 <%= isAprovado ? 'text-success' : 'text-danger' %>"><%= r.semesterAverage.toFixed(1) %></span></td>
+                  <td>
+                    <% if (isAprovado) { %>
+                      <span class="badge bg-success"><i class="bi bi-check-circle"></i> Aprovado</span>
+                    <% } else { %>
+                      <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Reprovado</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% } else { %>
+                <% var isAprovado = parseFloat(r.mediaBimestral) >= 6 && parseFloat(r.attendanceRate) >= 75; %>
+                <tr class="<%= !r.student.active ? 'opacity-75 bg-light' : '' %>">
+                  <td><%= r.student.enrollment || '-' %></td>
+                  <td class="fw-bold <%= !r.student.active ? 'text-decoration-line-through text-muted' : '' %>">
+                    <%= r.student.name %>
+                    <% if (!r.student.active) { %>
+                      <span class="badge bg-secondary text-dark small ms-1" style="font-size: 0.6rem; opacity: 0.7;">Transferido</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <span class="badge bg-<%= parseFloat(r.attendanceRate) >= 75 ? 'success' : 'danger' %>"><%= r.attendanceRate %>%</span>
+                  </td>
+                  <td><%= r.vistoStatus %></td>
+                  <td><%= r.notaAVI.toFixed(1) %></td>
+                  <td>
+                    <% if (r.notaRecuperacao !== null) { %>
+                      <span class="fw-bold text-primary"><%= r.notaRecuperacao.toFixed(1) %></span>
+                    <% } else { %>
+                      <span class="text-muted small">—</span>
+                    <% } %>
+                  </td>
+                  <td><%= r.notaPratica.toFixed(1) %></td>
+                  <td><span class="text-info fw-bold"><%= r.avaliacaoContinua.toFixed(1) %></span></td>
+                  <td><span class="fs-5 <%= isAprovado ? 'text-success' : 'text-danger' %>"><%= r.mediaBimestral.toFixed(1) %></span></td>
+                  <td>
+                    <% if (isAprovado) { %>
+                      <span class="badge bg-success"><i class="bi bi-check-circle"></i> Aprovado</span>
+                    <% } else { %>
+                      <span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Reprovado</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% } %>
             <% }); %>
           <% } else { %>
-            <tr><td colspan="10" class="text-center">Nenhum aluno ou dado registrado.</td></tr>
+            <tr><td colspan="11" class="text-center">Nenhum aluno ou dado registrado.</td></tr>
           <% } %>
         </tbody>
       </table>
@@ -102,11 +156,16 @@
       if (!table) return;
 
       const className = <%- JSON.stringify(selectedClass ? selectedClass.name : "Turma") %>;
-      const bimesterName = <%- JSON.stringify(selectedBimesterId && bimesters.find(b => b.id == selectedBimesterId) ? bimesters.find(b => b.id == selectedBimesterId).name : "Ano_Completo") %>;
+      let periodName = 'Ano_Completo';
+      if (selectedSemester === '1') periodName = '1_Semestre';
+      else if (selectedSemester === '2') periodName = '2_Semestre';
+      else if (selectedBimesterId) {
+        const b = bimesters.find(b => b.id == selectedBimesterId);
+        if (b) periodName = b.name.replace(/\s+/g, '_');
+      }
       
       const cleanClassName = className.replace(/\s+/g, '_');
-      const cleanBimesterName = bimesterName.replace(/\s+/g, '_');
-      const filename = `Relatorio_${cleanClassName}_${cleanBimesterName}.xlsx`;
+      const filename = `Relatorio_${cleanClassName}_${periodName}.xlsx`;
 
       // Clonar tabela para limpar elementos visuais como badges e ícones para o Excel
       const clonedTable = table.cloneNode(true);
@@ -125,11 +184,16 @@
       if (!element) return;
 
       const className = <%- JSON.stringify(selectedClass ? selectedClass.name : "Turma") %>;
-      const bimesterName = <%- JSON.stringify(selectedBimesterId && bimesters.find(b => b.id == selectedBimesterId) ? bimesters.find(b => b.id == selectedBimesterId).name : "Ano_Completo") %>;
+      let periodName = 'Ano_Completo';
+      if (selectedSemester === '1') periodName = '1_Semestre';
+      else if (selectedSemester === '2') periodName = '2_Semestre';
+      else if (selectedBimesterId) {
+        const b = bimesters.find(b => b.id == selectedBimesterId);
+        if (b) periodName = b.name.replace(/\s+/g, '_');
+      }
       
       const cleanClassName = className.replace(/\s+/g, '_');
-      const cleanBimesterName = bimesterName.replace(/\s+/g, '_');
-      const filename = `Relatorio_${cleanClassName}_${cleanBimesterName}.pdf`;
+      const filename = `Relatorio_${cleanClassName}_${periodName}.pdf`;
 
       const opt = {
         margin:       [10, 10, 10, 10],

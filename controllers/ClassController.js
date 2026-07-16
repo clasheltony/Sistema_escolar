@@ -87,7 +87,13 @@ exports.getClassDetails = async (req, res) => {
       where: { classId: id },
       order: [['active', 'DESC'], ['name', 'ASC']]
     });
-    res.render('class_details', { classInfo, students, teacherName: req.session.teacherName });
+
+    const otherClasses = await Class.findAll({
+      where: { teacherId: req.session.teacherId, id: { [require('sequelize').Op.ne]: id } },
+      order: [['name', 'ASC']]
+    });
+
+    res.render('class_details', { classInfo, students, otherClasses, teacherName: req.session.teacherName });
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao carregar detalhes da turma');

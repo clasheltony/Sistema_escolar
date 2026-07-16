@@ -1,4 +1,4 @@
-const { Student } = require('../models');
+const { Student, Attendance, Grade, Class, sequelize } = require('../models');
 
 exports.addStudent = async (req, res) => {
   try {
@@ -33,5 +33,38 @@ exports.updateStudent = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao atualizar aluno');
+  }
+};
+
+exports.transferStudent = async (req, res) => {
+  try {
+    const { classId, studentId } = req.params;
+    const { targetClassId } = req.body;
+    const teacherId = req.session.teacherId;
+
+    if (!targetClassId || targetClassId === classId) {
+      return res.redirect(`/classes/${classId}`);
+    }
+
+    const targetClass = await Class.findOne({ where: { id: targetClassId, teacherId } });
+    if (!targetClass) {
+      return res.status(404).send('Turma de destino não encontrada');
+    }
+
+    const student = await Student.findOne({ where: { id: studentId, classId } });
+    if (!student) {
+      return res.status(404).send('Aluno não encontrado');
+    }
+
+    await sequelize.transaction(async (t) => {
+      await Student.update({ classId: targetClassId }, { where: { id: studentId }, transaction: t });
+      await Attendance.update({ classId: targetClassId }, { where: { studentId }, transaction: t });
+      await Grade.update({ classId: targetClassId }, { where: { studentId }, transaction: t });
+    });
+
+    res.redirect(`/classes/${classId}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao transferir aluno');
   }
 };
