@@ -48,6 +48,7 @@ exports.getReport = async (req, res) => {
         let sumAVI = 0, countAVI = 0;
         let sumPratica = 0, countPratica = 0;
         let sumParticipacao = 0, countParticipacao = 0;
+        let sumRecuperacao = 0, countRecuperacao = 0;
 
         grades.forEach(g => {
           if (g.type === 'Nota') {
@@ -60,6 +61,9 @@ exports.getReport = async (req, res) => {
             } else if (g.activityName === 'Participação em Aula') {
               sumParticipacao += parseFloat(g.value);
               countParticipacao++;
+            } else if (g.activityName === 'Recuperação') {
+              sumRecuperacao += parseFloat(g.value);
+              countRecuperacao++;
             }
           } else if (g.type === 'Visto') {
             totalVistos++;
@@ -70,12 +74,15 @@ exports.getReport = async (req, res) => {
         const notaAVI = Math.round(countAVI > 0 ? (sumAVI / countAVI) : 0);
         const notaPratica = Math.round(countPratica > 0 ? (sumPratica / countPratica) : 0);
         const notaParticipacao = countParticipacao > 0 ? (sumParticipacao / countParticipacao) : 0;
+        const notaRecuperacao = countRecuperacao > 0 ? Math.round(sumRecuperacao / countRecuperacao) : null;
+
+        const notaAVIFinal = notaRecuperacao !== null && notaRecuperacao > notaAVI ? notaRecuperacao : notaAVI;
 
         const notaFrequencia = (parseFloat(attendanceRate) / 100) * 10;
         const notaVistos = totalVistos > 0 ? (earnedVistos / totalVistos) * 10 : 0;
 
         const avaliacaoContinua = Math.round((notaFrequencia + notaVistos + notaParticipacao) / 3);
-        const mediaBimestral = Math.round((notaAVI + notaPratica + avaliacaoContinua) / 3);
+        const mediaBimestral = Math.round((notaAVIFinal + notaPratica + avaliacaoContinua) / 3);
 
         reportData.push({
           student,
@@ -84,6 +91,8 @@ exports.getReport = async (req, res) => {
           notaAVI,
           notaPratica,
           avaliacaoContinua,
+          notaRecuperacao,
+          notaAVIFinal,
           mediaBimestral
         });
       }
@@ -103,3 +112,91 @@ exports.getReport = async (req, res) => {
     res.status(500).send('Erro ao gerar relatório');
   }
 };
+
+exports.getRecuperacaoReport = async (req, res) => {
+  try {
+    const classes = await Class.findAll({ where: { teacherId: req.session.teacherId } });
+    const bimesters = await Bimester.findAll({ where: { teacherId: req.session.teacherId }, order: [['id', 'ASC']] });
+    
+    const selectedBimesterId = req.query.bimesterId || '';
+
+    let dateFilter = {};
+
+    if (selectedBimesterId) {
+      const selectedBimester = bimesters.find(b => b.id == selectedBimesterId);
+      if (selectedBimester && selectedBimester.startDate && selectedBimester.endDate) {
+        dateFilter = {
+          date: {
+            [Op.between]: [selectedBimester.startDate, selectedBimester.endDate]
+          }
+        };
+      }
+    }
+
+    let classesReport = [];
+
+    for (const cls of classes) {
+      // Buscar todos os alunos da turma de uma vez
+      const students = await Student.findAll({ 
+        where: { classId: cls.id },
+        order: [['active', 'DESC'], ['name', 'ASC']]
+      });
+
+      if (students.length === 0) continue;
+
+      const studentIds = students.map(s => s.id);
+
+      const allGrades = await Grade.findAll({
+        where: { studentId: { [Op.in]: studentIds }, ...dateFilter }
+      });
+
+      const gradesByStudent = {};
+      allGrades.forEach(g => {
+        if (!gradesByStudent[g.studentId]) gradesByStudent[g.studentId] = [];
+        gradesByStudent[g.studentId].push(g);
+      });
+
+      let studentsInRecuperacao = [];
+
+      for (const student of students) {
+        const grades = gradesByStudent[student.id] || [];
+
+        let sumAVI = 0, countAVI = 0;
+        let sumRecuperacao = 0, countRecuperacao = 0;
+
+        grades.forEach(g => {
+          if (g.type === 'Nota') {
+            if (g.activityName === 'Prova (AVI)') {
+              sumAVI += parseFloat(g.value); countAVI++;
+            } else if (g.activityName === 'Recuperação') {
+              sumRecuperacao += parseFloat(g.value); countRecuperacao++;
+            }
+          }
+        });
+
+        const notaAVI = Math.round(countAVI > 0 ? (sumAVI / countAVI) : 0);
+
+        if ((countAVI > 0 && notaAVI < 6.0) || countRecuperacao > 0) {
+          studentsInRecuperacao.push({ student });
+        }
+      }
+
+      if (studentsInRecuperacao.length > 0) {
+        classesReport.push({ classInfo: cls, students: studentsInRecuperacao });
+      }
+    }
+
+    res.render('recuperacao_report', {
+      teacherName: req.session.teacherName,
+      classes,
+      bimesters,
+      selectedBimesterId,
+      classesReport
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao gerar relatório de recuperação');
+  }
+};
+
