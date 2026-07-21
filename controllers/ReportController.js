@@ -45,7 +45,7 @@ async function calcBimesterData(studentId, startDate, endDate, dateFilter) {
 
   const notaFrequencia = (parseFloat(attendanceRate) / 100) * 10;
   const notaVistos = totalVistos > 0 ? (earnedVistos / totalVistos) * 10 : 0;
-  const avaliacaoContinua = Math.round((notaFrequencia + notaVistos + notaParticipacao) / 3);
+  const avaliacaoContinua = Math.round((notaVistos * 4 + notaParticipacao * 4 + notaFrequencia * 2) / 10);
   const mediaBimestral = Math.round((notaAVIFinal + notaPratica + avaliacaoContinua) / 3);
 
   return { attendanceRate, vistoStatus: `${earnedVistos}/${totalVistos}`, notaAVI, notaPratica, avaliacaoContinua, notaRecuperacao, notaAVIFinal, mediaBimestral };
