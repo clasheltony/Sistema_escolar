@@ -314,11 +314,12 @@
   <!-- Aba Gerenciar -->
   <div class="tab-pane fade card p-4" id="gerenciar">
     <h4 class="mb-3">Gerenciar Notas e Vistos</h4>
-    <p class="text-muted small">Aqui você pode excluir atividades lançadas incorretamente.</p>
+    <p class="text-muted small">Clique em uma atividade para ver os lançamentos individuais. Você pode editar ou excluir cada registro separadamente.</p>
     <div class="table-responsive">
       <table class="table table-hover align-middle">
         <thead class="table-light">
           <tr>
+            <th style="width: 40px;"></th>
             <th>Data</th>
             <th>Tipo</th>
             <th>Nome da Atividade</th>
@@ -327,8 +328,9 @@
         </thead>
         <tbody>
           <% if (locals.uniqueGrades && uniqueGrades.length > 0) { %>
-            <% uniqueGrades.forEach(function(g) { %>
-              <tr>
+            <% uniqueGrades.forEach(function(g, idx) { %>
+              <tr class="group-header" data-target="detail-<%= idx %>" style="cursor: pointer;">
+                <td><i class="bi bi-chevron-right chevron-icon"></i></td>
                 <td><%= new Date(g.date + 'T00:00:00').toLocaleDateString('pt-BR') %></td>
                 <td>
                   <span class="badge <%= g.type === 'Nota' ? 'bg-primary' : 'bg-info text-white' %>">
@@ -336,24 +338,141 @@
                   </span>
                 </td>
                 <td><%= g.activityName %></td>
-                <td class="text-end">
+                <td class="text-end" onclick="event.stopPropagation();">
                   <form action="/classes/<%= classInfo.id %>/activities/grade/delete" method="POST" class="d-inline" onsubmit="return confirm('Excluir todos os registros desta atividade?');">
                     <input type="hidden" name="activityName" value="<%= g.activityName %>">
                     <input type="hidden" name="type" value="<%= g.type %>">
                     <input type="hidden" name="date" value="<%= g.date %>">
-                    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i> Excluir</button>
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Excluir Tudo</button>
                   </form>
+                </td>
+              </tr>
+              <tr class="group-detail" id="detail-<%= idx %>" style="display: none;">
+                <td colspan="5" class="p-0">
+                  <div class="p-3" style="background: #f8f9fa;">
+                    <table class="table table-sm table-bordered mb-0">
+                      <thead class="table-secondary">
+                        <tr>
+                          <th>Aluno</th>
+                          <th><%= g.type === 'Nota' ? 'Nota' : 'Status' %></th>
+                          <th class="text-end" style="width: 180px;">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% 
+                          const activityGrades = allGrades.filter(function(gr) {
+                            return gr.activityName === g.activityName && gr.type === g.type && gr.date === g.date;
+                          });
+                        %>
+                        <% activityGrades.forEach(function(gr) { %>
+                          <% const student = students.find(s => s.id === gr.studentId); %>
+                          <tr>
+                            <td><%= student ? student.name : 'Aluno desconhecido' %></td>
+                            <td>
+                              <% if (gr.type === 'Nota') { %>
+                                <span class="fw-bold"><%= gr.value !== null ? gr.value : '-' %></span>
+                              <% } else { %>
+                                <% if (gr.status === true) { %>
+                                  <span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Entregue</span>
+                                <% } else if (gr.status === false) { %>
+                                  <span class="text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> Não entregue</span>
+                                <% } else { %>
+                                  <span class="text-muted">-</span>
+                                <% } %>
+                              <% } %>
+                            </td>
+                            <td class="text-end">
+                              <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(<%= gr.id %>, '<%= gr.type %>', '<%= gr.value !== null ? gr.value : '' %>', '<%= gr.status === true ? 'true' : gr.status === false ? 'false' : '' %>', '<%= student ? student.name.replace(/'/g, "\\'") : 'Desconhecido' %>')">
+                                <i class="bi bi-pencil"></i> Editar
+                              </button>
+                              <form action="/classes/<%= classInfo.id %>/activities/grade/<%= gr.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Excluir este lançamento de <%= student ? student.name.replace(/'/g, "\\'") : '' %>?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                              </form>
+                            </td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
                 </td>
               </tr>
             <% }); %>
           <% } else { %>
-            <tr><td colspan="4" class="text-center text-muted">Nenhuma nota ou visto lançado.</td></tr>
+            <tr><td colspan="5" class="text-center text-muted">Nenhuma nota ou visto lançado.</td></tr>
           <% } %>
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<!-- Modal de Edição -->
+<div class="modal fade" id="editGradeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form id="editGradeForm" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Lançamento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p id="editStudentName" class="fw-bold mb-3"></p>
+          <div id="editNotaField">
+            <label class="form-label">Nota (0 a 10)</label>
+            <input type="number" step="0.1" min="0" max="10" name="value" id="editValue" class="form-control">
+          </div>
+          <div id="editVistoField" style="display: none;">
+            <div class="form-check">
+              <input type="checkbox" name="status" id="editStatus" class="form-check-input" value="on" style="transform: scale(1.5);">
+              <label class="form-check-label ms-2">Entregue</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.group-header').forEach(function(row) {
+    row.addEventListener('click', function() {
+      const targetId = this.dataset.target;
+      const detailRow = document.getElementById(targetId);
+      if (!detailRow) return;
+      const isVisible = detailRow.style.display !== 'none';
+      detailRow.style.display = isVisible ? 'none' : 'table-row';
+      const icon = this.querySelector('.chevron-icon');
+      if (icon) {
+        icon.classList.toggle('bi-chevron-right');
+        icon.classList.toggle('bi-chevron-down');
+      }
+    });
+  });
+
+  function openEditModal(gradeId, type, value, status, studentName) {
+    const form = document.getElementById('editGradeForm');
+    form.action = '/classes/<%= classInfo.id %>/activities/grade/' + gradeId + '/edit';
+
+    document.getElementById('editStudentName').textContent = studentName;
+
+    if (type === 'Nota') {
+      document.getElementById('editNotaField').style.display = 'block';
+      document.getElementById('editVistoField').style.display = 'none';
+      document.getElementById('editValue').value = value || '';
+    } else {
+      document.getElementById('editNotaField').style.display = 'none';
+      document.getElementById('editVistoField').style.display = 'block';
+      document.getElementById('editStatus').checked = (status === 'true');
+    }
+
+    var modal = new bootstrap.Modal(document.getElementById('editGradeModal'));
+    modal.show();
+  }
+</script>
 
 <!-- Scripts de Exportação e Dependências -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

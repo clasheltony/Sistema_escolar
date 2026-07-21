@@ -7,5 +7,7 @@ router.post('/attendance', activityController.postAttendance);
 router.post('/attendance/delete', activityController.deleteAttendance);
 router.post('/grade', activityController.postGrade);
 router.post('/grade/delete', activityController.deleteGrade);
+router.post('/grade/:gradeId/edit', activityController.updateSingleGrade);
+router.post('/grade/:gradeId/delete', activityController.deleteSingleGrade);
 
 module.exports = router;

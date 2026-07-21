@@ -45,6 +45,12 @@ exports.getActivities = async (req, res) => {
       order: [['date', 'DESC']]
     });
 
+    // Fetch all individual grades for detailed view
+    const allGrades = await Grade.findAll({
+      where: { classId },
+      order: [['date', 'DESC'], ['activityName', 'ASC'], ['studentId', 'ASC']]
+    });
+
     res.render('activities', { 
       classInfo, 
       students, 
@@ -53,7 +59,8 @@ exports.getActivities = async (req, res) => {
       history,
       lessonsPerDate,
       topicsPerDate,
-      uniqueGrades: uniqueGrades || []
+      uniqueGrades: uniqueGrades || [],
+      allGrades: allGrades || []
     });
   } catch (err) {
     console.error(err);
@@ -174,5 +181,38 @@ exports.deleteGrade = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao excluir atividade');
+  }
+};
+
+exports.updateSingleGrade = async (req, res) => {
+  try {
+    const { classId, gradeId } = req.params;
+    const { value, status } = req.body;
+
+    const grade = await Grade.findOne({ where: { id: gradeId, classId } });
+    if (!grade) return res.status(404).send('Registro não encontrado');
+
+    if (grade.type === 'Nota') {
+      grade.value = (value !== undefined && value !== '') ? parseFloat(value) : null;
+    } else if (grade.type === 'Visto') {
+      grade.status = (status === 'on');
+    }
+
+    await grade.save();
+    res.redirect(`/classes/${classId}/activities#gerenciar`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao atualizar lançamento');
+  }
+};
+
+exports.deleteSingleGrade = async (req, res) => {
+  try {
+    const { classId, gradeId } = req.params;
+    await Grade.destroy({ where: { id: gradeId, classId } });
+    res.redirect(`/classes/${classId}/activities#gerenciar`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao excluir lançamento');
   }
 };
