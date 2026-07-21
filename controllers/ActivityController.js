@@ -113,6 +113,33 @@ exports.postAttendance = async (req, res) => {
   }
 };
 
+exports.getAttendanceData = async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { date } = req.query;
+
+    if (!date) return res.status(400).json({ error: 'Date is required' });
+
+    const attendances = await Attendance.findAll({ where: { classId, date } });
+
+    let lessonCount = 0;
+    let lessonTopic = null;
+    const data = {};
+
+    attendances.forEach(a => {
+      if (a.lessonNumber > lessonCount) lessonCount = a.lessonNumber;
+      if (a.lessonTopic && !lessonTopic) lessonTopic = a.lessonTopic;
+      if (!data[a.studentId]) data[a.studentId] = {};
+      data[a.studentId][a.lessonNumber] = a.status;
+    });
+
+    res.json({ date, lessonCount, lessonTopic, data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao carregar dados da chamada' });
+  }
+};
+
 exports.deleteAttendance = async (req, res) => {
   try {
     const { classId } = req.params;

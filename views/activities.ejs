@@ -54,11 +54,11 @@
 <div class="tab-content">
   <!-- Aba Chamada -->
   <div class="tab-pane fade show active card p-4" id="chamada">
-    <form action="/classes/<%= classInfo.id %>/activities/attendance" method="POST">
+      <form action="/classes/<%= classInfo.id %>/activities/attendance" method="POST" id="attendanceForm">
       <div class="row mb-3">
         <div class="col-md-3">
           <label class="form-label fw-bold">Data da Aula</label>
-          <input type="date" name="date" class="form-control" required value="<%= new Date().toISOString().split('T')[0] %>" max="<%= new Date().toISOString().split('T')[0] %>">
+          <input type="date" name="date" id="attendanceDate" class="form-control" required value="<%= new Date().toISOString().split('T')[0] %>" max="<%= new Date().toISOString().split('T')[0] %>">
         </div>
         <div class="col-md-3">
           <label class="form-label fw-bold">Quantidade de Aulas</label>
@@ -70,7 +70,7 @@
         </div>
         <div class="col-md-6">
           <label class="form-label fw-bold">Tema da Aula <span class="text-muted fw-normal">(opcional)</span></label>
-          <input type="text" name="lessonTopic" class="form-control" placeholder="Ex: Frações, Revolução Francesa, Funções..." maxlength="200">
+          <input type="text" name="lessonTopic" id="lessonTopic" class="form-control" placeholder="Ex: Frações, Revolução Francesa, Funções..." maxlength="200">
         </div>
       </div>
       
@@ -148,10 +148,15 @@
                   <% } else { %>
                     <div class="mb-2"></div>
                   <% } %>
-                  <form action="/classes/<%= classInfo.id %>/activities/attendance/delete" method="POST" onsubmit="return confirm('Excluir toda a chamada deste dia?');">
-                    <input type="hidden" name="date" value="<%= date %>">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir Chamada"><i class="bi bi-trash"></i></button>
-                  </form>
+                  <div class="d-flex justify-content-center gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-primary" title="Editar Chamada" onclick="editAttendance('<%= date %>')">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <form action="/classes/<%= classInfo.id %>/activities/attendance/delete" method="POST" onsubmit="return confirm('Excluir toda a chamada deste dia?');">
+                      <input type="hidden" name="date" value="<%= date %>">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir Chamada"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </div>
                 </th>
               <% }); %>
             <% } else { %>
@@ -218,6 +223,56 @@
     
     // Run on page load
     document.addEventListener('DOMContentLoaded', syncLessons);
+
+    function editAttendance(date) {
+      const classId = <%= classInfo.id %>;
+
+      fetch(`/classes/${classId}/activities/attendance/data?date=${date}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Erro ao carregar dados');
+          return res.json();
+        })
+        .then(data => {
+          // Set date
+          document.getElementById('attendanceDate').value = date;
+
+          // Set lesson count
+          document.getElementById('lessonCountSelect').value = data.lessonCount || 1;
+          syncLessons();
+
+          // Set lesson topic
+          document.getElementById('lessonTopic').value = data.lessonTopic || '';
+
+          // Reset all radio buttons first (set to Presente for active students)
+          document.querySelectorAll('#attendanceTable input[type="radio"]').forEach(radio => {
+            const parts = radio.name.split('_');
+            const lessonNum = parseInt(parts[1]);
+            const studentId = parseInt(parts[2]);
+            const studentData = data.data && data.data[studentId];
+            const savedStatus = studentData ? studentData[lessonNum] : null;
+
+            if (savedStatus) {
+              radio.checked = (radio.value === savedStatus);
+            } else if (!radio.disabled) {
+              // Default to Presente for students with no record
+              radio.checked = (radio.value === 'Presente');
+            }
+          });
+
+          // Switch to Chamada Diária tab
+          const tab = document.getElementById('chamada-tab');
+          if (tab) {
+            const tabInstance = new bootstrap.Tab(tab);
+            tabInstance.show();
+          }
+
+          // Scroll to top of form
+          document.getElementById('attendanceForm').scrollIntoView({ behavior: 'smooth' });
+        })
+        .catch(err => {
+          alert('Erro ao carregar dados da chamada: ' + err.message);
+        });
+    }
   </script>
 
   <!-- Aba Notas -->
