@@ -25,6 +25,7 @@ exports.postLogin = async (req, res) => {
     console.log(`Login bem-sucedido: ${email}`);
     req.session.teacherId = teacher.id;
     req.session.teacherName = teacher.name;
+    req.session.role = teacher.role;
     res.redirect('/dashboard');
   } catch (error) {
     console.error('Erro no Login:', error);
@@ -66,6 +67,7 @@ exports.postRegister = async (req, res) => {
     console.log(`Usuário criado com sucesso: ${email}`);
     req.session.teacherId = teacher.id;
     req.session.teacherName = teacher.name;
+    req.session.role = teacher.role;
     res.redirect('/dashboard');
   } catch (error) {
     console.error('Erro no Registro:', error);

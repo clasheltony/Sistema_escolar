@@ -1,5 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Grade = sequelize.define('Grade', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     activityName: {
       type: DataTypes.STRING,
       allowNull: false
@@ -14,11 +19,19 @@ module.exports = (sequelize, DataTypes) => {
     },
     value: {
       type: DataTypes.DECIMAL(5, 2),
-      allowNull: true // Vistos might just be a boolean/null, Notas have value
+      allowNull: true
     },
     status: {
-      type: DataTypes.BOOLEAN, // true = gave check, false = missed
+      type: DataTypes.BOOLEAN,
       allowNull: true
+    },
+    studentId: {
+      type: DataTypes.UUID,
+      allowNull: false
+    },
+    classId: {
+      type: DataTypes.UUID,
+      allowNull: false
     }
   });
   return Grade;

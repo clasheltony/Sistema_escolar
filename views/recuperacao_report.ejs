@@ -7,6 +7,14 @@
   </div>
   <form action="/reports/recuperacao" method="GET" class="d-flex align-items-center gap-2">
     <label class="fw-bold text-nowrap mb-0 me-1">Filtrar:</label>
+    <% if (isSecretaria && teachers.length > 0) { %>
+      <select name="teacherId" class="form-select w-auto" onchange="this.form.submit()">
+        <option value="">Todos os professores</option>
+        <% teachers.forEach(function(t) { %>
+          <option value="<%= t.id %>" <%= (selectedTeacherId === t.id) ? 'selected' : '' %>><%= t.name %></option>
+        <% }); %>
+      </select>
+    <% } %>
     <select name="semester" class="form-select w-auto" onchange="this.form.submit()">
       <option value="">Período</option>
       <option value="1" <%= (selectedSemester === '1') ? 'selected' : '' %>>1º Semestre</option>
@@ -38,6 +46,7 @@
         <div class="card-header bg-gradient bg-primary text-white p-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
           <h5 class="mb-0 fw-bold">
             <i class="bi bi-people-fill me-2"></i><%= cr.classInfo.name %>
+            <% if (isSecretaria && cr.classInfo.Teacher) { %><span class="badge bg-light text-dark ms-2"><%= cr.classInfo.Teacher.name %></span><% } %>
           </h5>
           <span class="badge bg-light text-primary fw-bold fs-6 shadow-sm">
             Disciplina: <%= cr.classInfo.subject || 'Sem disciplina' %>

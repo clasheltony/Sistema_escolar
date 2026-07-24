@@ -1,19 +1,27 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-bs-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema Gestão Escolar</title>
-  <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Custom CSS -->
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <style>
     body { background-color: #f8f9fa; }
+    [data-bs-theme="dark"] body { background-color: #212529; }
     .navbar { box-shadow: 0 2px 4px rgba(0,0,0,.1); }
     .card { box-shadow: 0 4px 6px rgba(0,0,0,.05); border: none; border-radius: 10px; }
+    [data-bs-theme="dark"] .card-footer.bg-white { background-color: var(--bs-body-bg) !important; }
+    #syncStatus { cursor: pointer; }
+    #syncStatus.syncing { pointer-events: none; opacity: 0.7; }
   </style>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    })();
+  </script>
 </head>
 <body>
 
@@ -32,7 +40,16 @@
             <li class="nav-item">
               <a class="nav-link" href="/report">Relatório Geral</a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/reports/recuperacao">Recuperação</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/settings">Configurações</a>
+            </li>
           </ul>
+          <span id="syncStatus" class="navbar-text text-light me-3 small" title="Clique para sincronizar" onclick="runSync()">
+            <i class="bi bi-arrow-repeat"></i> <span id="syncLabel">Verificando...</span>
+          </span>
           <span class="navbar-text text-light me-3">
             Olá, <%= teacherName %>
           </span>
@@ -47,5 +64,47 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    async function checkSyncStatus() {
+      var el = document.getElementById('syncStatus');
+      if (!el) return;
+      try {
+        var res = await fetch('/sync/status');
+        var data = await res.json();
+        if (data.online) {
+          el.innerHTML = '<i class="bi bi-cloud-check-fill text-success"></i> <span id="syncLabel">Online</span>';
+        } else {
+          el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
+        }
+      } catch(e) {
+        el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
+      }
+    }
+
+    async function runSync() {
+      var el = document.getElementById('syncStatus');
+      if (!el || el.classList.contains('syncing')) return;
+      el.classList.add('syncing');
+      el.innerHTML = '<i class="bi bi-arrow-repeat text-info"></i> <span id="syncLabel">Sincronizando...</span>';
+      try {
+        var res = await fetch('/sync/run', { method: 'POST' });
+        var data = await res.json();
+        if (data.online) {
+          el.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> <span id="syncLabel">Sincronizado</span>';
+          setTimeout(checkSyncStatus, 3000);
+        } else {
+          el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
+        }
+      } catch(e) {
+        el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
+      }
+      el.classList.remove('syncing');
+    }
+
+    if (document.getElementById('syncStatus')) {
+      checkSyncStatus();
+      setInterval(checkSyncStatus, 60000);
+    }
+  </script>
 </body>
 </html>

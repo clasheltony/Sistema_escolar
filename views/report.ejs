@@ -2,7 +2,15 @@
 
 <div class="mb-4 d-flex justify-content-between align-items-center">
   <h2>Relatório Geral</h2>
-  <form action="/report" method="GET" class="d-flex w-75 justify-content-end">
+  <form action="/report" method="GET" class="d-flex w-75 justify-content-end flex-wrap gap-2">
+    <% if (isSecretaria && teachers.length > 0) { %>
+      <select name="teacherId" class="form-select w-auto" onchange="this.form.submit()">
+        <option value="">Todos os professores</option>
+        <% teachers.forEach(function(t) { %>
+          <option value="<%= t.id %>" <%= (selectedTeacherId === t.id) ? 'selected' : '' %>><%= t.name %></option>
+        <% }); %>
+      </select>
+    <% } %>
     <select name="classId" class="form-select me-2 w-50" onchange="this.form.submit()">
       <% classes.forEach(function(c) { %>
         <option value="<%= c.id %>" <%= (selectedClass && selectedClass.id === c.id) ? 'selected' : '' %>><%= c.name %></option>
@@ -29,6 +37,7 @@
   <div class="card p-4 shadow-sm" id="report-card">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <h4 class="mb-0">Boletim Consolidado - <%= selectedClass.name %>
+        <% if (isSecretaria && selectedClass.Teacher) { %><span class="badge bg-secondary fs-6 ms-2"><%= selectedClass.Teacher.name %></span><% } %>
         <% if (selectedSemester === '1') { %><span class="badge bg-info fs-6 ms-2">1º Semestre</span><% } %>
         <% if (selectedSemester === '2') { %><span class="badge bg-info fs-6 ms-2">2º Semestre</span><% } %>
       </h4>

@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Class, Student, Attendance, Grade, Bimester } = require('../models');
+const { Class, Student, Attendance, Grade, Bimester, Teacher } = require('../models');
 
 async function calcBimesterData(studentId, startDate, endDate, dateFilter) {
   if (!dateFilter) {
@@ -53,33 +53,43 @@ async function calcBimesterData(studentId, startDate, endDate, dateFilter) {
 
 exports.getReport = async (req, res) => {
   try {
-    const classes = await Class.findAll({ where: { teacherId: req.session.teacherId } });
-    const bimesters = await Bimester.findAll({ where: { teacherId: req.session.teacherId }, order: [['id', 'ASC']] });
-    
-    const classId = req.query.classId || (classes.length > 0 ? classes[0].id : null);
+    const isSecretaria = req.session.role === 'secretaria';
+    const teacherFilter = isSecretaria ? {} : { teacherId: req.session.teacherId };
+
+    const classes = await Class.findAll({
+      where: teacherFilter,
+      include: isSecretaria ? [{ model: Teacher, attributes: ['name'] }] : []
+    });
+    const bimesters = await Bimester.findAll({ where: teacherFilter, order: [['createdAt', 'ASC']] });
+    const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
+
+    const selectedTeacherId = req.query.teacherId || '';
+    let filteredClasses = classes;
+    if (isSecretaria && selectedTeacherId) {
+      filteredClasses = classes.filter(c => c.teacherId === selectedTeacherId);
+    }
+
+    const classId = req.query.classId || (filteredClasses.length > 0 ? filteredClasses[0].id : null);
     const selectedBimesterId = req.query.bimesterId || '';
     const selectedSemester = req.query.semester || '';
 
     let reportData = [];
     let selectedClass = null;
-
     let dateFilter = {};
     let selectedBimester = null;
 
     if (selectedBimesterId) {
       selectedBimester = bimesters.find(b => b.id == selectedBimesterId);
       if (selectedBimester && selectedBimester.startDate && selectedBimester.endDate) {
-        dateFilter = {
-          date: {
-            [Op.between]: [selectedBimester.startDate, selectedBimester.endDate]
-          }
-        };
+        dateFilter = { date: { [Op.between]: [selectedBimester.startDate, selectedBimester.endDate] } };
       }
     }
 
     if (classId) {
-      selectedClass = await Class.findByPk(classId);
-      const students = await Student.findAll({ 
+      selectedClass = await Class.findByPk(classId, {
+        include: isSecretaria ? [{ model: Teacher, attributes: ['name'] }] : []
+      });
+      const students = await Student.findAll({
         where: { classId },
         order: [['active', 'DESC'], ['name', 'ASC']]
       });
@@ -110,14 +120,18 @@ exports.getReport = async (req, res) => {
       }
     }
 
-    res.render('report', { 
+    res.render('report', {
       teacherName: req.session.teacherName,
-      classes,
+      role: req.session.role,
+      classes: filteredClasses,
+      teachers,
+      selectedTeacherId,
       selectedClass,
       reportData,
       bimesters,
       selectedBimesterId,
-      selectedSemester
+      selectedSemester,
+      isSecretaria
     });
 
   } catch (err) {
@@ -128,9 +142,22 @@ exports.getReport = async (req, res) => {
 
 exports.getRecuperacaoReport = async (req, res) => {
   try {
-    const classes = await Class.findAll({ where: { teacherId: req.session.teacherId } });
-    const bimesters = await Bimester.findAll({ where: { teacherId: req.session.teacherId }, order: [['id', 'ASC']] });
-    
+    const isSecretaria = req.session.role === 'secretaria';
+    const teacherFilter = isSecretaria ? {} : { teacherId: req.session.teacherId };
+
+    const classes = await Class.findAll({
+      where: teacherFilter,
+      include: isSecretaria ? [{ model: Teacher, attributes: ['name'] }] : []
+    });
+    const bimesters = await Bimester.findAll({ where: teacherFilter, order: [['createdAt', 'ASC']] });
+    const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
+
+    const selectedTeacherId = req.query.teacherId || '';
+    let filteredClasses = classes;
+    if (isSecretaria && selectedTeacherId) {
+      filteredClasses = classes.filter(c => c.teacherId === selectedTeacherId);
+    }
+
     const selectedBimesterId = req.query.bimesterId || '';
     const selectedSemester = req.query.semester || '';
 
@@ -142,39 +169,26 @@ exports.getRecuperacaoReport = async (req, res) => {
         const b1 = bimesters[0];
         const b2 = bimesters[1];
         if (b1.startDate && b2.endDate) {
-          dateFilter = {
-            date: {
-              [Op.between]: [b1.startDate, b2.endDate]
-            }
-          };
+          dateFilter = { date: { [Op.between]: [b1.startDate, b2.endDate] } };
         }
       } else if (semIndex === 2 && bimesters.length >= 4) {
         const b3 = bimesters[2];
         const b4 = bimesters[3];
         if (b3.startDate && b4.endDate) {
-          dateFilter = {
-            date: {
-              [Op.between]: [b3.startDate, b4.endDate]
-            }
-          };
+          dateFilter = { date: { [Op.between]: [b3.startDate, b4.endDate] } };
         }
       }
     } else if (selectedBimesterId) {
       const selectedBimester = bimesters.find(b => b.id == selectedBimesterId);
       if (selectedBimester && selectedBimester.startDate && selectedBimester.endDate) {
-        dateFilter = {
-          date: {
-            [Op.between]: [selectedBimester.startDate, selectedBimester.endDate]
-          }
-        };
+        dateFilter = { date: { [Op.between]: [selectedBimester.startDate, selectedBimester.endDate] } };
       }
     }
 
     let classesReport = [];
 
-    for (const cls of classes) {
-      // Buscar todos os alunos da turma de uma vez
-      const students = await Student.findAll({ 
+    for (const cls of filteredClasses) {
+      const students = await Student.findAll({
         where: { classId: cls.id },
         order: [['active', 'DESC'], ['name', 'ASC']]
       });
@@ -225,11 +239,15 @@ exports.getRecuperacaoReport = async (req, res) => {
 
     res.render('recuperacao_report', {
       teacherName: req.session.teacherName,
-      classes,
+      role: req.session.role,
+      classes: filteredClasses,
+      teachers,
+      selectedTeacherId,
       bimesters,
       selectedBimesterId,
       selectedSemester,
-      classesReport
+      classesReport,
+      isSecretaria
     });
 
   } catch (err) {
@@ -237,4 +255,3 @@ exports.getRecuperacaoReport = async (req, res) => {
     res.status(500).send('Erro ao gerar relatório de recuperação');
   }
 };
-

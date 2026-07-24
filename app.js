@@ -5,15 +5,9 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const { sequelize, Teacher } = require('./models');
 const routes = require('./routes');
-const authRoutes = require('./routes/auth');
-const classRoutes = require('./routes/classes');
-const studentRoutes = require('./routes/students');
-const activityRoutes = require('./routes/activities');
-const reportRoutes = require('./routes/reports');
 
 const app = express();
 
-// Configurações
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -25,31 +19,41 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// Rotas
 app.use('/', routes);
 
-// Sincronizar Banco e Iniciar Servidor
 const PORT = process.env.PORT || 3000;
 
-const syncOptions = { alter: true };
-sequelize.sync(syncOptions).then(async () => {
+sequelize.sync().then(async () => {
   console.log('Banco de dados sincronizado');
   
-  // Criar professor padrão se não existir
-  const defaultEmail = 'admin@escola.com';
-  const existingTeacher = await Teacher.findOne({ where: { email: defaultEmail } });
-  if (!existingTeacher) {
+  const adminEmail = 'admin@escola.com';
+  const existingAdmin = await Teacher.findOne({ where: { email: adminEmail } });
+  if (!existingAdmin) {
     const hashedPassword = await bcrypt.hash('admin123', 10);
     await Teacher.create({
       name: 'Professor Admin',
-      email: defaultEmail,
+      email: adminEmail,
       password: hashedPassword
     });
-    console.log(`Professor criado: ${defaultEmail} / admin123`);
+    console.log(`Professor criado: ${adminEmail} / admin123`);
+  }
+
+  const secretariaEmail = 'secretaria@escola.com';
+  const existingSecretaria = await Teacher.findOne({ where: { email: secretariaEmail } });
+  if (!existingSecretaria) {
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    await Teacher.create({
+      name: 'Secretaria',
+      email: secretariaEmail,
+      password: hashedPassword,
+      role: 'secretaria'
+    });
+    console.log(`Conta secretaria criada: ${secretariaEmail} / admin123`);
   }
 
   app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Acesse: http://localhost:${PORT}`);
   });
 }).catch(err => {
   console.error('Erro ao conectar com o banco de dados:', err);

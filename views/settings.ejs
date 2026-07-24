@@ -5,38 +5,61 @@
   <h2>Configurações</h2>
 </div>
 
-<div class="card p-4 shadow-sm mb-4">
-  <h4 class="mb-3">Configuração de Bimestres</h4>
-  <p class="text-muted">Defina as datas de início e término de cada bimestre. O sistema usará essas datas para filtrar as chamadas e notas no Relatório Geral.</p>
-  
-  <form action="/settings/bimesters" method="POST">
-    <div class="table-responsive">
-      <table class="table align-middle">
-        <thead>
-          <tr>
-            <th>Bimestre</th>
-            <th>Data de Início</th>
-            <th>Data de Término</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% bimesters.forEach(function(b) { %>
+<% if (isSecretaria) { %>
+  <div class="card p-3 shadow-sm mb-4">
+    <form method="GET" action="/settings" class="d-flex align-items-center gap-2">
+      <label class="fw-bold mb-0">Professor:</label>
+      <select name="teacherId" class="form-select w-auto" onchange="this.form.submit()">
+        <option value="">Selecione um professor</option>
+        <% teachers.forEach(function(t) { %>
+          <option value="<%= t.id %>" <%= (selectedTeacherId === t.id) ? 'selected' : '' %>><%= t.name %></option>
+        <% }); %>
+      </select>
+    </form>
+  </div>
+<% } %>
+
+<% if (bimesters.length > 0) { %>
+  <div class="card p-4 shadow-sm mb-4">
+    <h4 class="mb-3">Configuração de Bimestres</h4>
+    <p class="text-muted">Defina as datas de início e término de cada bimestre.</p>
+    
+    <form action="/settings/bimesters" method="POST">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
             <tr>
-              <td class="fw-bold"><%= b.name %></td>
-              <td>
-                <input type="hidden" name="bimesterIds[]" value="<%= b.id %>">
-                <input type="date" name="startDates[]" class="form-control" value="<%= b.startDate || '' %>">
-              </td>
-              <td>
-                <input type="date" name="endDates[]" class="form-control" value="<%= b.endDate || '' %>">
-              </td>
+              <th>Bimestre</th>
+              <th>Data de Início</th>
+              <th>Data de Término</th>
             </tr>
-          <% }); %>
-        </tbody>
-      </table>
-    </div>
-    <button type="submit" class="btn btn-primary mt-3">Salvar Datas</button>
-  </form>
-</div>
+          </thead>
+          <tbody>
+            <% bimesters.forEach(function(b) { %>
+              <tr>
+                <td class="fw-bold"><%= b.name %></td>
+                <td>
+                  <input type="hidden" name="bimesterIds[]" value="<%= b.id %>">
+                  <input type="date" name="startDates[]" class="form-control" value="<%= b.startDate || '' %>">
+                </td>
+                <td>
+                  <input type="date" name="endDates[]" class="form-control" value="<%= b.endDate || '' %>">
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% if (isSecretaria && selectedTeacherId) { %>
+        <input type="hidden" name="teacherId" value="<%= selectedTeacherId %>">
+      <% } %>
+      <button type="submit" class="btn btn-primary mt-3">Salvar Datas</button>
+    </form>
+  </div>
+<% } else if (isSecretaria && !selectedTeacherId) { %>
+  <div class="card p-4 shadow-sm">
+    <p class="text-muted mb-0">Selecione um professor acima para gerenciar os bimestres.</p>
+  </div>
+<% } %>
 
 <%- include('footer') %>

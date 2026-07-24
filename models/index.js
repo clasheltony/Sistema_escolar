@@ -2,27 +2,11 @@ require('dotenv').config();
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
 
-let sequelize;
-
-if (process.env.DATABASE_URL) {
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    protocol: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    },
-    logging: false
-  });
-} else {
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: path.join(__dirname, '..', 'database.sqlite'),
-    logging: false
-  });
-}
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: path.join(__dirname, '..', 'database.sqlite'),
+  logging: false
+});
 
 const Teacher = require('./Teacher')(sequelize, DataTypes);
 const Class = require('./Class')(sequelize, DataTypes);
@@ -30,8 +14,8 @@ const Student = require('./Student')(sequelize, DataTypes);
 const Attendance = require('./Attendance')(sequelize, DataTypes);
 const Grade = require('./Grade')(sequelize, DataTypes);
 const Bimester = require('./Bimester')(sequelize, DataTypes);
+const SyncQueue = require('./SyncQueue')(sequelize, DataTypes);
 
-// Relações
 Teacher.hasMany(Class, { foreignKey: 'teacherId' });
 Class.belongsTo(Teacher, { foreignKey: 'teacherId' });
 
@@ -53,6 +37,33 @@ Grade.belongsTo(Student, { foreignKey: 'studentId' });
 Class.hasMany(Grade, { foreignKey: 'classId' });
 Grade.belongsTo(Class, { foreignKey: 'classId' });
 
+async function addToSyncQueue(tableName, recordId, operation, recordData) {
+  try {
+    await SyncQueue.create({
+      tableName,
+      recordId,
+      operation,
+      data: recordData ? JSON.stringify(recordData) : null
+    });
+  } catch (err) {
+    console.error('sync error:', err.message);
+  }
+}
+
+[Teacher, Class, Student, Attendance, Grade, Bimester].forEach(Model => {
+  Model.addHook('afterCreate', (instance) => {
+    addToSyncQueue(Model.name, instance.id, 'CREATE', instance.toJSON());
+  });
+
+  Model.addHook('afterUpdate', (instance) => {
+    addToSyncQueue(Model.name, instance.id, 'UPDATE', instance.toJSON());
+  });
+
+  Model.addHook('afterDestroy', (instance) => {
+    addToSyncQueue(Model.name, instance.id, 'DELETE', { id: instance.id });
+  });
+});
+
 module.exports = {
   sequelize,
   Teacher,
@@ -60,5 +71,6 @@ module.exports = {
   Student,
   Attendance,
   Grade,
-  Bimester
+  Bimester,
+  SyncQueue
 };

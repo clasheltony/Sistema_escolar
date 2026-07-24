@@ -2,24 +2,70 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    (function() {
-      var toggle = document.getElementById('themeToggle');
-      if (toggle) {
-        var html = document.documentElement;
-        var icon = toggle.querySelector('i');
-        function updateIcon() {
-          icon.className = html.getAttribute('data-bs-theme') === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+    // Sync status
+    async function checkSyncStatus() {
+      var el = document.getElementById('syncStatus');
+      var label = document.getElementById('syncLabel');
+      if (!el) return;
+      try {
+        var res = await fetch('/sync/status');
+        var data = await res.json();
+        if (data.online) {
+          el.innerHTML = '<i class="bi bi-cloud-check-fill text-success"></i> <span id="syncLabel">Online</span>';
+          el.setAttribute('title', 'Online - Clique para sincronizar');
+        } else {
+          el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
+          el.setAttribute('title', 'Offline');
         }
-        toggle.addEventListener('click', function() {
-          var current = html.getAttribute('data-bs-theme');
-          var next = current === 'dark' ? 'light' : 'dark';
-          html.setAttribute('data-bs-theme', next);
-          localStorage.setItem('theme', next);
-          updateIcon();
-        });
-        updateIcon();
+      } catch(e) {
+        el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
       }
-    })();
+    }
+
+    async function runSync() {
+      var el = document.getElementById('syncStatus');
+      var label = document.getElementById('syncLabel');
+      if (!el || el.classList.contains('syncing')) return;
+      el.classList.add('syncing');
+      var original = el.innerHTML;
+      el.innerHTML = '<i class="bi bi-arrow-repeat text-info"></i> <span id="syncLabel">Sincronizando...</span>';
+      try {
+        var res = await fetch('/sync/run', { method: 'POST' });
+        var data = await res.json();
+        if (data.online) {
+          el.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> <span id="syncLabel">Sincronizado</span>';
+          setTimeout(checkSyncStatus, 3000);
+        } else {
+          el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
+        }
+      } catch(e) {
+        el.innerHTML = original;
+      }
+      el.classList.remove('syncing');
+    }
+
+    if (document.getElementById('syncStatus')) {
+      checkSyncStatus();
+      setInterval(checkSyncStatus, 60000);
+    }
+
+    // Theme toggle
+    var toggle = document.getElementById('themeToggle');
+    if (toggle) {
+      var html = document.documentElement;
+      var icon = toggle.querySelector('i');
+      function updateIcon() {
+        icon.className = html.getAttribute('data-bs-theme') === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+      }
+      toggle.addEventListener('click', function() {
+        var current = html.getAttribute('data-bs-theme');
+        var next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-bs-theme', next);
+        localStorage.setItem('theme', next);
+        updateIcon();
+      });
+      updateIcon();
+    }
   </script>
 </body>
 </html>

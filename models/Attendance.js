@@ -1,5 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Attendance = sequelize.define('Attendance', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
     date: {
       type: DataTypes.DATEONLY,
       allowNull: false
@@ -17,6 +22,14 @@ module.exports = (sequelize, DataTypes) => {
     lessonTopic: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    studentId: {
+      type: DataTypes.UUID,
+      allowNull: false
+    },
+    classId: {
+      type: DataTypes.UUID,
+      allowNull: false
     }
   });
   return Attendance;

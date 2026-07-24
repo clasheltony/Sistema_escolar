@@ -15,6 +15,8 @@
     .navbar { box-shadow: 0 2px 4px rgba(0,0,0,.1); }
     .card { box-shadow: 0 4px 6px rgba(0,0,0,.05); border: none; border-radius: 10px; }
     [data-bs-theme="dark"] .card-footer.bg-white { background-color: var(--bs-body-bg) !important; }
+    #syncStatus { cursor: pointer; }
+    #syncStatus.syncing { pointer-events: none; opacity: 0.7; }
   </style>
   <script>
     (function() {
@@ -50,8 +52,14 @@
           <button id="themeToggle" class="btn btn-outline-light btn-sm me-2" title="Alternar modo escuro">
             <i class="bi bi-sun-fill"></i>
           </button>
+          <span id="syncStatus" class="navbar-text text-light me-3 small" title="Clique para sincronizar" onclick="runSync()">
+            <i class="bi bi-arrow-repeat"></i> <span id="syncLabel">Verificando...</span>
+          </span>
           <span class="navbar-text text-light me-3">
             Olá, <%= teacherName %>
+            <% if (typeof role !== 'undefined' && role === 'secretaria') { %>
+              <span class="badge bg-warning text-dark ms-1">SECRETARIA</span>
+            <% } %>
           </span>
           <a href="/logout" class="btn btn-outline-light btn-sm">Sair</a>
         </div>
