@@ -60,10 +60,12 @@ exports.getReport = async (req, res) => {
       where: teacherFilter,
       include: isSecretaria ? [{ model: Teacher, attributes: ['name'] }] : []
     });
-    const bimesters = await Bimester.findAll({ where: teacherFilter, order: [['createdAt', 'ASC']] });
-    const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
 
     const selectedTeacherId = req.query.teacherId || '';
+    const bimesterWhere = isSecretaria && selectedTeacherId ? { teacherId: selectedTeacherId } : teacherFilter;
+    const bimesters = await Bimester.findAll({ where: bimesterWhere, order: [['name', 'ASC']] });
+    const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
+
     let filteredClasses = classes;
     if (isSecretaria && selectedTeacherId) {
       filteredClasses = classes.filter(c => c.teacherId === selectedTeacherId);
@@ -149,10 +151,12 @@ exports.getRecuperacaoReport = async (req, res) => {
       where: teacherFilter,
       include: isSecretaria ? [{ model: Teacher, attributes: ['name'] }] : []
     });
-    const bimesters = await Bimester.findAll({ where: teacherFilter, order: [['createdAt', 'ASC']] });
-    const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
 
     const selectedTeacherId = req.query.teacherId || '';
+    const bimesterWhere = isSecretaria && selectedTeacherId ? { teacherId: selectedTeacherId } : teacherFilter;
+    const bimesters = await Bimester.findAll({ where: bimesterWhere, order: [['name', 'ASC']] });
+    const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
+
     let filteredClasses = classes;
     if (isSecretaria && selectedTeacherId) {
       filteredClasses = classes.filter(c => c.teacherId === selectedTeacherId);

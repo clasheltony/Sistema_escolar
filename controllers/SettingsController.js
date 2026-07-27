@@ -9,7 +9,7 @@ exports.getSettings = async (req, res) => {
     const selectedTeacherId = req.query.teacherId || null;
     let bimesters;
     if (isSecretaria && selectedTeacherId) {
-      bimesters = await Bimester.findAll({ where: { teacherId: selectedTeacherId }, order: [['createdAt', 'ASC']] });
+      bimesters = await Bimester.findAll({ where: { teacherId: selectedTeacherId }, order: [['name', 'ASC']] });
       if (bimesters.length === 0) {
         await Bimester.bulkCreate([
           { name: '1º Bimestre', teacherId: selectedTeacherId },
@@ -17,10 +17,10 @@ exports.getSettings = async (req, res) => {
           { name: '3º Bimestre', teacherId: selectedTeacherId },
           { name: '4º Bimestre', teacherId: selectedTeacherId }
         ]);
-        bimesters = await Bimester.findAll({ where: { teacherId: selectedTeacherId }, order: [['createdAt', 'ASC']] });
+        bimesters = await Bimester.findAll({ where: { teacherId: selectedTeacherId }, order: [['name', 'ASC']] });
       }
     } else {
-      bimesters = await Bimester.findAll({ where: teacherFilter, order: [['createdAt', 'ASC']] });
+      bimesters = await Bimester.findAll({ where: teacherFilter, order: [['name', 'ASC']] });
       if (bimesters.length === 0 && !isSecretaria) {
         await Bimester.bulkCreate([
           { name: '1º Bimestre', teacherId: req.session.teacherId },
@@ -28,7 +28,7 @@ exports.getSettings = async (req, res) => {
           { name: '3º Bimestre', teacherId: req.session.teacherId },
           { name: '4º Bimestre', teacherId: req.session.teacherId }
         ]);
-        bimesters = await Bimester.findAll({ where: { teacherId: req.session.teacherId }, order: [['createdAt', 'ASC']] });
+        bimesters = await Bimester.findAll({ where: { teacherId: req.session.teacherId }, order: [['name', 'ASC']] });
       }
     }
 
