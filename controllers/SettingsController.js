@@ -12,10 +12,10 @@ exports.getSettings = async (req, res) => {
       bimesters = await Bimester.findAll({ where: { teacherId: selectedTeacherId }, order: [['name', 'ASC']] });
       if (bimesters.length === 0) {
         await Bimester.bulkCreate([
-          { name: '1º Bimestre', teacherId: selectedTeacherId },
-          { name: '2º Bimestre', teacherId: selectedTeacherId },
-          { name: '3º Bimestre', teacherId: selectedTeacherId },
-          { name: '4º Bimestre', teacherId: selectedTeacherId }
+          { name: '1º Bimestre', startDate: '2026-02-10', endDate: '2026-04-23', teacherId: selectedTeacherId },
+          { name: '2º Bimestre', startDate: '2026-04-24', endDate: '2026-07-23', teacherId: selectedTeacherId },
+          { name: '3º Bimestre', startDate: '2026-07-24', endDate: '2026-10-05', teacherId: selectedTeacherId },
+          { name: '4º Bimestre', startDate: '2026-10-06', endDate: '2026-12-17', teacherId: selectedTeacherId }
         ]);
         bimesters = await Bimester.findAll({ where: { teacherId: selectedTeacherId }, order: [['name', 'ASC']] });
       }
@@ -23,10 +23,10 @@ exports.getSettings = async (req, res) => {
       bimesters = await Bimester.findAll({ where: teacherFilter, order: [['name', 'ASC']] });
       if (bimesters.length === 0 && !isSecretaria) {
         await Bimester.bulkCreate([
-          { name: '1º Bimestre', teacherId: req.session.teacherId },
-          { name: '2º Bimestre', teacherId: req.session.teacherId },
-          { name: '3º Bimestre', teacherId: req.session.teacherId },
-          { name: '4º Bimestre', teacherId: req.session.teacherId }
+          { name: '1º Bimestre', startDate: '2026-02-10', endDate: '2026-04-23', teacherId: req.session.teacherId },
+          { name: '2º Bimestre', startDate: '2026-04-24', endDate: '2026-07-23', teacherId: req.session.teacherId },
+          { name: '3º Bimestre', startDate: '2026-07-24', endDate: '2026-10-05', teacherId: req.session.teacherId },
+          { name: '4º Bimestre', startDate: '2026-10-06', endDate: '2026-12-17', teacherId: req.session.teacherId }
         ]);
         bimesters = await Bimester.findAll({ where: { teacherId: req.session.teacherId }, order: [['name', 'ASC']] });
       }

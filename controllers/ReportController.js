@@ -62,8 +62,18 @@ exports.getReport = async (req, res) => {
     });
 
     const selectedTeacherId = req.query.teacherId || '';
-    const bimesterWhere = isSecretaria && selectedTeacherId ? { teacherId: selectedTeacherId } : teacherFilter;
-    const bimesters = await Bimester.findAll({ where: bimesterWhere, order: [['name', 'ASC']] });
+    const showAllBimesters = isSecretaria && !selectedTeacherId;
+    const bimesterOwnerId = showAllBimesters ? null : (isSecretaria ? selectedTeacherId : req.session.teacherId);
+    let bimesters = await Bimester.findAll({ where: bimesterOwnerId ? { teacherId: bimesterOwnerId } : {}, order: [['name', 'ASC']] });
+    if (bimesters.length === 0 && bimesterOwnerId) {
+      await Bimester.bulkCreate([
+        { name: '1º Bimestre', startDate: '2026-02-10', endDate: '2026-04-23', teacherId: bimesterOwnerId },
+        { name: '2º Bimestre', startDate: '2026-04-24', endDate: '2026-07-23', teacherId: bimesterOwnerId },
+        { name: '3º Bimestre', startDate: '2026-07-24', endDate: '2026-10-05', teacherId: bimesterOwnerId },
+        { name: '4º Bimestre', startDate: '2026-10-06', endDate: '2026-12-17', teacherId: bimesterOwnerId }
+      ]);
+      bimesters = await Bimester.findAll({ where: { teacherId: bimesterOwnerId }, order: [['name', 'ASC']] });
+    }
     const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
 
     let filteredClasses = classes;
@@ -105,10 +115,11 @@ exports.getReport = async (req, res) => {
           b1 = bimesters[2]; b2 = bimesters[3];
         }
 
-        if (b1 && b2 && b1.startDate && b1.endDate && b2.startDate && b2.endDate) {
+        if (b1 && b2) {
+          const hasDates = b1.startDate && b1.endDate && b2.startDate && b2.endDate;
           for (const student of students) {
-            const d1 = await calcBimesterData(student.id, b1.startDate, b1.endDate);
-            const d2 = await calcBimesterData(student.id, b2.startDate, b2.endDate);
+            const d1 = await calcBimesterData(student.id, hasDates ? b1.startDate : null, hasDates ? b1.endDate : null);
+            const d2 = await calcBimesterData(student.id, hasDates ? b2.startDate : null, hasDates ? b2.endDate : null);
             const attendanceAvg = ((parseFloat(d1.attendanceRate) + parseFloat(d2.attendanceRate)) / 2).toFixed(2);
             const semesterAverage = Math.round((d1.mediaBimestral + d2.mediaBimestral) / 2);
             reportData.push({ student, b1: d1, b2: d2, attendanceAvg, semesterAverage });
@@ -153,8 +164,18 @@ exports.getRecuperacaoReport = async (req, res) => {
     });
 
     const selectedTeacherId = req.query.teacherId || '';
-    const bimesterWhere = isSecretaria && selectedTeacherId ? { teacherId: selectedTeacherId } : teacherFilter;
-    const bimesters = await Bimester.findAll({ where: bimesterWhere, order: [['name', 'ASC']] });
+    const showAllBimesters = isSecretaria && !selectedTeacherId;
+    const bimesterOwnerId = showAllBimesters ? null : (isSecretaria ? selectedTeacherId : req.session.teacherId);
+    let bimesters = await Bimester.findAll({ where: bimesterOwnerId ? { teacherId: bimesterOwnerId } : {}, order: [['name', 'ASC']] });
+    if (bimesters.length === 0 && bimesterOwnerId) {
+      await Bimester.bulkCreate([
+        { name: '1º Bimestre', startDate: '2026-02-10', endDate: '2026-04-23', teacherId: bimesterOwnerId },
+        { name: '2º Bimestre', startDate: '2026-04-24', endDate: '2026-07-23', teacherId: bimesterOwnerId },
+        { name: '3º Bimestre', startDate: '2026-07-24', endDate: '2026-10-05', teacherId: bimesterOwnerId },
+        { name: '4º Bimestre', startDate: '2026-10-06', endDate: '2026-12-17', teacherId: bimesterOwnerId }
+      ]);
+      bimesters = await Bimester.findAll({ where: { teacherId: bimesterOwnerId }, order: [['name', 'ASC']] });
+    }
     const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
 
     let filteredClasses = classes;
