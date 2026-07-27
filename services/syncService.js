@@ -1,7 +1,14 @@
-const { Sequelize } = require('sequelize');
+const { Sequelize, DataTypes } = require('sequelize');
 const { SyncQueue } = require('../models');
+const dns = require('dns');
+
+// Força o uso do DNS do Google para resolver endereços externos (como Supabase)
+// Necessário pois o DNS padrão do ISP pode não resolver corretamente
+dns.setDefaultResultOrder('ipv4first');
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 
 let sequelizeOnline = null;
+let schemaSynced = false;
 
 function getOnlineConnection() {
   if (sequelizeOnline) return sequelizeOnline;
@@ -15,6 +22,96 @@ function getOnlineConnection() {
     logging: false
   });
   return sequelizeOnline;
+}
+
+function getPgModels(conn) {
+  const options = { freezeTableName: true, timestamps: false };
+  return {
+    Teacher: conn.define('Teacher', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      name: DataTypes.STRING,
+      email: DataTypes.STRING,
+      password: DataTypes.STRING,
+      role: DataTypes.STRING,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options),
+    Class: conn.define('Class', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      name: DataTypes.STRING,
+      subject: DataTypes.STRING,
+      teacherId: DataTypes.UUID,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options),
+    Student: conn.define('Student', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      name: DataTypes.STRING,
+      enrollment: DataTypes.STRING,
+      active: DataTypes.BOOLEAN,
+      classId: DataTypes.UUID,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options),
+    Attendance: conn.define('Attendance', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      date: DataTypes.DATEONLY,
+      lessonNumber: DataTypes.INTEGER,
+      status: DataTypes.STRING,
+      lessonTopic: DataTypes.STRING,
+      studentId: DataTypes.UUID,
+      classId: DataTypes.UUID,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options),
+    Grade: conn.define('Grade', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      activityName: DataTypes.STRING,
+      type: DataTypes.STRING,
+      date: DataTypes.DATEONLY,
+      value: DataTypes.DECIMAL(5, 2),
+      status: DataTypes.BOOLEAN,
+      studentId: DataTypes.UUID,
+      classId: DataTypes.UUID,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options),
+    Bimester: conn.define('Bimester', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      name: DataTypes.STRING,
+      startDate: DataTypes.DATEONLY,
+      endDate: DataTypes.DATEONLY,
+      teacherId: DataTypes.UUID,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options)
+  };
+}
+
+async function ensureSchema() {
+  if (schemaSynced) return true;
+  const conn = getOnlineConnection();
+  if (!conn) return false;
+
+  const models = getPgModels(conn);
+  try {
+    for (const Model of Object.values(models)) {
+      await Model.sync({ alter: true });
+    }
+    console.log('[SYNC] Schema do PostgreSQL sincronizado (UUID)');
+  } catch (alterErr) {
+    try {
+      for (const Model of Object.values(models)) {
+        await Model.sync({ force: true });
+      }
+      console.log('[SYNC] Tabelas do PostgreSQL recriadas com schema UUID');
+    } catch (forceErr) {
+      console.error('[SYNC] Erro ao criar tabelas no PostgreSQL:', forceErr.message);
+      return false;
+    }
+  }
+  schemaSynced = true;
+  return true;
 }
 
 async function checkConnection() {
@@ -45,6 +142,9 @@ async function pushChanges() {
   const conn = getOnlineConnection();
   if (!conn) return { pushed: 0, errors: 0 };
 
+  const schemaOk = await ensureSchema();
+  if (!schemaOk) return { pushed: 0, errors: 0, schemaError: true };
+
   const pendingItems = await SyncQueue.findAll({ where: { synced: false }, order: [['createdAt', 'ASC']] });
   let pushed = 0, errors = 0;
 
@@ -53,32 +153,18 @@ async function pushChanges() {
       const recordData = item.data ? JSON.parse(item.data) : null;
       const tableName = item.tableName;
 
-      let Model;
-      try { Model = require('../models')[tableName]; } catch { Model = null; }
-
-      if (!Model) {
-        await item.update({ synced: true, syncError: 'Model not found' });
-        continue;
-      }
-
       if (item.operation === 'CREATE') {
-        try {
-          await conn.query(
-            `INSERT INTO "${tableName}" ("id","name","email","password","subject","enrollment","active","date","lessonNumber","status","lessonTopic","activityName","type","value","startDate","endDate","teacherId","classId","studentId","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) ON CONFLICT ("id") DO NOTHING`,
-            { bind: Object.values(recordData || {}), logging: false }
-          );
-        } catch {
-          const data = recordData || {};
-          const cols = Object.keys(data).map(k => `"${k}"`).join(',');
-          const vals = Object.keys(data).map((_, i) => `$${i + 1}`).join(',');
-          const binds = Object.values(data);
-          await conn.query(`INSERT INTO "${tableName}" (${cols}) VALUES (${vals}) ON CONFLICT ("id") DO NOTHING`, { bind: binds });
-        }
+        const data = recordData || {};
+        const cols = Object.keys(data).map(k => `"${k}"`).join(',');
+        const vals = Object.keys(data).map((_, i) => `$${i + 1}`).join(',');
+        const binds = Object.values(data);
+        await conn.query(`INSERT INTO "${tableName}" (${cols}) VALUES (${vals}) ON CONFLICT ("id") DO NOTHING`, { bind: binds });
       } else if (item.operation === 'UPDATE') {
         const data = recordData || {};
         const id = item.recordId;
-        const sets = Object.keys(data).filter(k => k !== 'id').map((k, i) => `"${k}"=$${i + 1}`).join(',');
-        const binds = Object.keys(data).filter(k => k !== 'id').map(k => data[k]);
+        const entries = Object.entries(data).filter(([k]) => k !== 'id');
+        const sets = entries.map((_, i) => `"${entries[i][0]}"=$${i + 1}`).join(',');
+        const binds = entries.map(([, v]) => v);
         binds.push(id);
         await conn.query(`UPDATE "${tableName}" SET ${sets} WHERE "id"=$${binds.length}`, { bind: binds });
       } else if (item.operation === 'DELETE') {
@@ -100,42 +186,42 @@ async function pullChanges() {
   const conn = getOnlineConnection();
   if (!conn) return { pulled: 0, errors: 0 };
 
-  const { sequelize, Teacher, Class, Student, Attendance, Grade, Bimester } = require('../models');
+  const schemaOk = await ensureSchema();
+  if (!schemaOk) return { pulled: 0, errors: 0, schemaError: true };
+
+  const { Teacher, Class, Student, Attendance, Grade, Bimester } = require('../models');
   let pulled = 0, errors = 0;
 
   const models = [
-    { name: 'Teacher', model: Teacher, columns: ['id', 'name', 'email', 'password', 'createdAt', 'updatedAt'] },
-    { name: 'Class', model: Class, columns: ['id', 'name', 'subject', 'teacherId', 'createdAt', 'updatedAt'] },
-    { name: 'Student', model: Student, columns: ['id', 'name', 'enrollment', 'active', 'classId', 'createdAt', 'updatedAt'] },
-    { name: 'Attendance', model: Attendance, columns: ['id', 'date', 'lessonNumber', 'status', 'lessonTopic', 'studentId', 'classId', 'createdAt', 'updatedAt'] },
-    { name: 'Grade', model: Grade, columns: ['id', 'activityName', 'type', 'date', 'value', 'status', 'studentId', 'classId', 'createdAt', 'updatedAt'] },
-    { name: 'Bimester', model: Bimester, columns: ['id', 'name', 'startDate', 'endDate', 'teacherId', 'createdAt', 'updatedAt'] },
+    { name: 'Teacher', model: Teacher },
+    { name: 'Class', model: Class },
+    { name: 'Student', model: Student },
+    { name: 'Attendance', model: Attendance },
+    { name: 'Grade', model: Grade },
+    { name: 'Bimester', model: Bimester },
   ];
 
-  for (const { name, model, columns } of models) {
+  for (const { name, model } of models) {
     try {
       const localIds = (await model.findAll({ attributes: ['id'], raw: true })).map(r => r.id);
       const remoteRows = await conn.query(
-        `SELECT * FROM public."${name}"`,
+        `SELECT * FROM "${name}"`,
         { type: Sequelize.QueryTypes.SELECT }
       );
 
       for (const row of remoteRows) {
         try {
           if (localIds.includes(row.id)) {
-            // Update local
             const local = await model.findByPk(row.id);
             if (local && new Date(row.updatedAt) > new Date(local.updatedAt)) {
               await model.update(row, { where: { id: row.id } });
               pulled++;
             }
           } else {
-            // Insert local
             await model.create(row);
             pulled++;
           }
         } catch (err) {
-          // Skip records that fail (might be related to missing parent references)
           errors++;
         }
       }
