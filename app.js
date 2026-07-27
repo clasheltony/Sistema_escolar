@@ -6,8 +6,6 @@ const bcrypt = require('bcrypt');
 const { sequelize, Teacher } = require('./models');
 const routes = require('./routes');
 
-const { sync } = require('./services/syncService');
-
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -51,20 +49,6 @@ sequelize.sync().then(async () => {
       role: 'secretaria'
     });
     console.log(`Conta secretaria criada: ${secretariaEmail} / admin123`);
-  }
-
-  if (process.env.DATABASE_URL) {
-    console.log('Sincronizando com servidor online...');
-    sync().then(result => {
-      if (result.online) {
-        console.log(`[SYNC] Enviados: ${result.pushResult.pushed} | Erros: ${result.pushResult.errors}`);
-        console.log(`[SYNC] Recebidos: ${result.pullResult.pulled} | Erros: ${result.pullResult.errors}`);
-      } else {
-        console.log('[SYNC] Servidor online indisponivel');
-      }
-    }).catch(err => {
-      console.error('[SYNC] Erro na sincronizacao:', err.message);
-    });
   }
 
   app.listen(PORT, () => {

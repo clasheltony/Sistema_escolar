@@ -7,7 +7,8 @@ exports.getLogin = (req, res) => {
 };
 
 exports.postLogin = async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
   try {
     console.log(`Tentativa de login para: ${email}`);
     const teacher = await Teacher.findOne({ where: { email } });
