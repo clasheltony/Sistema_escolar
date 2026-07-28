@@ -54,11 +54,9 @@ async function calcBimesterData(studentId, startDate, endDate, dateFilter) {
 exports.getReport = async (req, res) => {
   try {
     const isSecretaria = req.session.role === 'secretaria';
-    const teacherFilter = isSecretaria ? {} : { teacherId: req.session.teacherId };
 
     const classes = await Class.findAll({
-      where: teacherFilter,
-      include: isSecretaria ? [{ model: Teacher, attributes: ['name'] }] : []
+      include: [{ model: Teacher, attributes: ['name'] }]
     });
 
     const selectedTeacherId = req.query.teacherId || '';
@@ -159,8 +157,7 @@ exports.getRecuperacaoReport = async (req, res) => {
     const teacherFilter = isSecretaria ? {} : { teacherId: req.session.teacherId };
 
     const classes = await Class.findAll({
-      where: teacherFilter,
-      include: isSecretaria ? [{ model: Teacher, attributes: ['name'] }] : []
+      include: [{ model: Teacher, attributes: ['name'] }]
     });
 
     const selectedTeacherId = req.query.teacherId || '';

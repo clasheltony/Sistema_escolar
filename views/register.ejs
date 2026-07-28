@@ -30,6 +30,13 @@
           <label class="form-label">Confirmar Senha</label>
           <input type="password" name="confirmPassword" class="form-control" required placeholder="Digite a senha novamente">
         </div>
+        <div class="mb-3">
+          <label class="form-label">Perfil de Acesso</label>
+          <select name="role" class="form-select">
+            <option value="professor">Professor</option>
+            <option value="secretaria">Secretaria</option>
+          </select>
+        </div>
         <button type="submit" class="btn btn-success w-100 mb-3">Cadastrar e Entrar</button>
         <div class="text-center">
           <span class="text-muted">Já tem uma conta?</span> <a href="/login" class="text-decoration-none">Faça login</a>

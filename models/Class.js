@@ -9,13 +9,21 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
+    turmaId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     subject: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    baseTecnica: {
       type: DataTypes.STRING,
       allowNull: true
     },
     teacherId: {
       type: DataTypes.UUID,
-      allowNull: false
+      allowNull: true
     }
   });
   return Class;

@@ -37,6 +37,8 @@
   <div class="card p-4 shadow-sm" id="report-card">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <h4 class="mb-0">Boletim Consolidado - <%= selectedClass.name %>
+        <span class="badge bg-secondary fs-6 ms-2"><%= selectedClass.subject || 'Sem disciplina' %></span>
+        <% if (selectedClass.baseTecnica) { %><span class="badge bg-info fs-6 ms-2"><%= selectedClass.baseTecnica %></span><% } %>
         <% if (isSecretaria && selectedClass.Teacher) { %><span class="badge bg-secondary fs-6 ms-2"><%= selectedClass.Teacher.name %></span><% } %>
         <% if (selectedSemester === '1') { %><span class="badge bg-info fs-6 ms-2">1º Semestre</span><% } %>
         <% if (selectedSemester === '2') { %><span class="badge bg-info fs-6 ms-2">2º Semestre</span><% } %>
@@ -157,8 +159,8 @@
   </div>
 
   <!-- Scripts de Exportação -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="/js/xlsx.full.min.js"></script>
+  <script src="/js/html2pdf.bundle.min.js"></script>
   <script>
     function exportToExcel() {
       const table = document.querySelector('table');

@@ -30,7 +30,10 @@
 
 <div class="mb-4">
   <a href="/dashboard" class="btn btn-link text-decoration-none p-0 mb-2"><i class="bi bi-arrow-left"></i> Voltar</a>
-  <h2>Atividades e Chamada: <%= classInfo.name %></h2>
+  <h2>Atividades e Chamada: <%= classInfo.name %>
+    <% if (classInfo.subject) { %><span class="badge bg-secondary fs-6"><%= classInfo.subject %></span><% } %>
+    <% if (classInfo.baseTecnica) { %><span class="badge bg-info fs-6"><%= classInfo.baseTecnica %></span><% } %>
+  </h2>
 </div>
 
 <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">

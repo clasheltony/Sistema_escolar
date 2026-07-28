@@ -1,25 +1,39 @@
-const { Class, Student, Teacher } = require('../models');
+const { Class, Student, Teacher, Turma, Serie } = require('../models');
+const { Op } = require('sequelize');
+
+const SUBJECTS = [
+  'Português', 'Matemática', 'Química', 'Física', 'História',
+  'Geografia', 'Biologia', 'Educação Física', 'Inglês', 'Espanhol',
+  'Produção Textual'
+];
+const BASES_TECNICAS = ['Análises Clínicas', 'Informática'];
 
 exports.getDashboard = async (req, res) => {
   try {
     const isSecretaria = req.session.role === 'secretaria';
-    let classes, teachers;
-
-    if (isSecretaria) {
-      teachers = await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] });
-      classes = await Class.findAll({
-        include: [{ model: Teacher, attributes: ['name'] }],
-        order: [['createdAt', 'DESC']]
-      });
-    } else {
-      classes = await Class.findAll({ where: { teacherId: req.session.teacherId } });
-    }
+    const teachers = await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] });
+    const series = await Serie.findAll({ order: [['name', 'ASC']] });
+    const turmas = await Turma.findAll({
+      include: [{ model: Serie, attributes: ['id', 'name', 'color'] }],
+      order: [['name', 'ASC']]
+    });
+    const classes = await Class.findAll({
+      include: [
+        { model: Teacher, attributes: ['name'] },
+        { model: Turma, attributes: ['id', 'name', 'serieId'] }
+      ],
+      order: [['name', 'ASC']]
+    });
 
     res.render('dashboard', {
       teacherName: req.session.teacherName,
       role: req.session.role,
       classes,
       teachers,
+      series,
+      turmas,
+      subjects: SUBJECTS,
+      basesTecnicas: BASES_TECNICAS,
       isSecretaria
     });
   } catch (err) {
@@ -30,9 +44,11 @@ exports.getDashboard = async (req, res) => {
 
 exports.createClass = async (req, res) => {
   try {
-    const { name, subject } = req.body;
-    const teacherId = req.session.role === 'secretaria' ? (req.body.teacherId || req.session.teacherId) : req.session.teacherId;
-    await Class.create({ name, subject, teacherId });
+    const { turmaId, subject, baseTecnica } = req.body;
+    const teacherId = req.session.role === 'secretaria' ? (req.body.teacherId || null) : req.session.teacherId;
+    const turma = await Turma.findByPk(turmaId);
+    if (!turma) return res.status(400).send('Turma não encontrada');
+    await Class.create({ name: turma.name, turmaId, subject, baseTecnica: baseTecnica || null, teacherId });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);
@@ -55,9 +71,17 @@ exports.deleteClass = async (req, res) => {
 exports.updateClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, subject } = req.body;
+    const { turmaId, subject, baseTecnica } = req.body;
     const where = req.session.role === 'secretaria' ? { id } : { id, teacherId: req.session.teacherId };
-    await Class.update({ name, subject }, { where });
+    const updateData = { subject, baseTecnica: baseTecnica || null };
+    if (turmaId) {
+      const turma = await Turma.findByPk(turmaId);
+      if (turma) {
+        updateData.name = turma.name;
+        updateData.turmaId = turmaId;
+      }
+    }
+    await Class.update(updateData, { where });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);
@@ -68,16 +92,21 @@ exports.updateClass = async (req, res) => {
 exports.duplicateClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const { newSubject } = req.body;
-    const teacherId = req.session.role === 'secretaria' ? (req.body.teacherId || req.session.teacherId) : req.session.teacherId;
+    const { turmaId, subject, baseTecnica } = req.body;
+    const teacherId = req.session.role === 'secretaria' ? (req.body.teacherId || null) : req.session.teacherId;
     const where = req.session.role === 'secretaria' ? { id } : { id, teacherId: req.session.teacherId };
 
     const originalClass = await Class.findOne({ where });
     if (!originalClass) return res.status(404).send('Turma não encontrada');
 
+    const turma = await Turma.findByPk(turmaId);
+    if (!turma) return res.status(400).send('Turma não encontrada');
+
     const newClass = await Class.create({
-      name: originalClass.name,
-      subject: newSubject,
+      name: turma.name,
+      turmaId,
+      subject,
+      baseTecnica: baseTecnica || null,
       teacherId
     });
 
@@ -100,18 +129,21 @@ exports.duplicateClass = async (req, res) => {
 exports.getClassDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const where = req.session.role === 'secretaria' ? { id } : { id, teacherId: req.session.teacherId };
-    const classInfo = await Class.findOne({ where, include: [{ model: Teacher, attributes: ['name'] }] });
+    const classInfo = await Class.findByPk(id, {
+      include: [
+        { model: Teacher, attributes: ['name'] },
+        { model: Turma, attributes: ['name'] }
+      ]
+    });
     if (!classInfo) return res.status(404).send('Turma não encontrada');
 
-    const students = await Student.findAll({ 
+    const students = await Student.findAll({
       where: { classId: id },
       order: [['active', 'DESC'], ['name', 'ASC']]
     });
 
-    const teacherFilter = req.session.role === 'secretaria' ? {} : { teacherId: req.session.teacherId };
     const otherClasses = await Class.findAll({
-      where: { ...teacherFilter, id: { [require('sequelize').Op.ne]: id } },
+      where: { id: { [Op.ne]: id } },
       order: [['name', 'ASC']]
     });
 
@@ -119,5 +151,69 @@ exports.getClassDetails = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao carregar detalhes da turma');
+  }
+};
+
+exports.createTurma = async (req, res) => {
+  try {
+    const { name, serieId } = req.body;
+    await Turma.create({ name, serieId: serieId || null });
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao criar turma');
+  }
+};
+
+exports.updateTurma = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, serieId } = req.body;
+    await Turma.update({ name, serieId: serieId || null }, { where: { id } });
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao atualizar turma');
+  }
+};
+
+exports.deleteTurma = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const classCount = await Class.count({ where: { turmaId: id } });
+    if (classCount > 0) {
+      return res.status(400).send('Não é possível excluir: existem turmas vinculadas a esta turma');
+    }
+    await Turma.destroy({ where: { id } });
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao deletar turma');
+  }
+};
+
+exports.createSerie = async (req, res) => {
+  try {
+    const { name, color } = req.body;
+    await Serie.create({ name, color: color || null });
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao criar série');
+  }
+};
+
+exports.deleteSerie = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const turmaCount = await Turma.count({ where: { serieId: id } });
+    if (turmaCount > 0) {
+      return res.status(400).send('Não é possível excluir: existem turmas vinculadas a esta série');
+    }
+    await Serie.destroy({ where: { id } });
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Erro ao deletar série');
   }
 };

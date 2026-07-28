@@ -45,25 +45,26 @@ exports.getRegister = (req, res) => {
 };
 
 exports.postRegister = async (req, res) => {
-  const { name, email, password, confirmPassword } = req.body;
-  try {
-    console.log(`Tentativa de registro: ${email}`);
-    if (password !== confirmPassword) {
-      return res.render('register', { error: 'As senhas não coincidem' });
-    }
+    const { name, email, password, confirmPassword, role } = req.body;
+    try {
+      console.log(`Tentativa de registro: ${email}`);
+      if (password !== confirmPassword) {
+        return res.render('register', { error: 'As senhas não coincidem' });
+      }
 
-    const existingTeacher = await Teacher.findOne({ where: { email } });
-    if (existingTeacher) {
-      console.log(`Email já em uso: ${email}`);
-      return res.render('register', { error: 'Este e-mail já está em uso' });
-    }
+      const existingTeacher = await Teacher.findOne({ where: { email } });
+      if (existingTeacher) {
+        console.log(`Email já em uso: ${email}`);
+        return res.render('register', { error: 'Este e-mail já está em uso' });
+      }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const teacher = await Teacher.create({
-      name,
-      email,
-      password: hashedPassword
-    });
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const teacher = await Teacher.create({
+        name,
+        email,
+        password: hashedPassword,
+        role: (role === 'secretaria') ? 'secretaria' : 'professor'
+      });
 
     console.log(`Usuário criado com sucesso: ${email}`);
     req.session.teacherId = teacher.id;

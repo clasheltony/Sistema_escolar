@@ -4,7 +4,7 @@ const { addToSyncQueue } = require('../services/syncService');
 exports.getActivities = async (req, res) => {
   try {
     const { classId } = req.params;
-    const classInfo = await Class.findOne({ where: { id: classId, teacherId: req.session.teacherId } });
+    const classInfo = await Class.findByPk(classId);
     if (!classInfo) return res.status(404).send('Turma não encontrada');
 
     const students = await Student.findAll({ 

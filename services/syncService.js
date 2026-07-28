@@ -39,8 +39,24 @@ function getPgModels(conn) {
     Class: conn.define('Class', {
       id: { type: DataTypes.UUID, primaryKey: true },
       name: DataTypes.STRING,
+      turmaId: DataTypes.UUID,
       subject: DataTypes.STRING,
+      baseTecnica: DataTypes.STRING,
       teacherId: DataTypes.UUID,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options),
+    Turma: conn.define('Turma', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      name: DataTypes.STRING,
+      serieId: DataTypes.UUID,
+      createdAt: DataTypes.DATE,
+      updatedAt: DataTypes.DATE
+    }, options),
+    Serie: conn.define('Serie', {
+      id: { type: DataTypes.UUID, primaryKey: true },
+      name: DataTypes.STRING,
+      color: DataTypes.STRING,
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE
     }, options),
@@ -189,11 +205,13 @@ async function pullChanges() {
   const schemaOk = await ensureSchema();
   if (!schemaOk) return { pulled: 0, errors: 0, schemaError: true };
 
-  const { Teacher, Class, Student, Attendance, Grade, Bimester } = require('../models');
+  const { Teacher, Serie, Turma, Class, Student, Attendance, Grade, Bimester } = require('../models');
   let pulled = 0, errors = 0;
 
   const models = [
     { name: 'Teacher', model: Teacher },
+    { name: 'Serie', model: Serie },
+    { name: 'Turma', model: Turma },
     { name: 'Class', model: Class },
     { name: 'Student', model: Student },
     { name: 'Attendance', model: Attendance },

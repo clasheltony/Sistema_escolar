@@ -3,7 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const bcrypt = require('bcrypt');
-const { sequelize, Teacher } = require('./models');
+const { sequelize, Teacher, Serie, Turma, Class } = require('./models');
 const routes = require('./routes');
 
 const app = express();
@@ -25,7 +25,37 @@ const PORT = process.env.PORT || 3000;
 
 sequelize.sync().then(async () => {
   console.log('Banco de dados sincronizado');
-  
+
+  try {
+    await sequelize.query(`ALTER TABLE "Classes" ADD COLUMN "turmaId" TEXT REFERENCES "Turmas"("id");`);
+    console.log('Coluna turmaId adicionada');
+  } catch (e) { if (!e.message.includes('duplicate column')) console.error(e.message); }
+
+  try {
+    await sequelize.query(`ALTER TABLE "Classes" ADD COLUMN "baseTecnica" TEXT;`);
+    console.log('Coluna baseTecnica adicionada');
+  } catch (e) { if (!e.message.includes('duplicate column')) console.error(e.message); }
+
+  try {
+    await sequelize.query(`ALTER TABLE "Turmas" ADD COLUMN "serieId" TEXT REFERENCES "Series"("id");`);
+    console.log('Coluna serieId adicionada');
+  } catch (e) { if (!e.message.includes('duplicate column')) console.error(e.message); }
+
+  const classCount = await Class.count();
+  if (classCount > 0) {
+    const turmaCount = await Turma.count();
+    if (turmaCount === 0) {
+      const classes = await Class.findAll({ group: ['name'], attributes: ['name'] });
+      for (const c of classes) {
+        if (c.name) {
+          const turma = await Turma.create({ name: c.name });
+          await Class.update({ turmaId: turma.id }, { where: { name: c.name, turmaId: null } });
+        }
+      }
+      console.log('Turmas migradas dos dados existentes');
+    }
+  }
+
   const adminEmail = 'admin@escola.com';
   const existingAdmin = await Teacher.findOne({ where: { email: adminEmail } });
   if (!existingAdmin) {

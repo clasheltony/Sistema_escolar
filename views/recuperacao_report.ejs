@@ -51,6 +51,11 @@
           <span class="badge bg-light text-primary fw-bold fs-6 shadow-sm">
             Disciplina: <%= cr.classInfo.subject || 'Sem disciplina' %>
           </span>
+          <% if (cr.classInfo.baseTecnica) { %>
+            <span class="badge bg-light text-info fw-bold fs-6 shadow-sm">
+              Base: <%= cr.classInfo.baseTecnica %>
+            </span>
+          <% } %>
         </div>
         
         <div class="card-body p-0">
@@ -83,8 +88,8 @@
   </div>
 
   <!-- Scripts de Exportação -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="/js/xlsx.full.min.js"></script>
+  <script src="/js/html2pdf.bundle.min.js"></script>
   <script>
     function exportToExcel() {
       const container = document.getElementById('recuperacao-report-container');

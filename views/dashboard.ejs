@@ -1,20 +1,53 @@
 <%- include('header') %>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2><%= isSecretaria ? 'Todas as Turmas' : 'Minhas Turmas' %></h2>
-  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newClassModal">
-    <i class="bi bi-plus-circle"></i> Nova Turma
-  </button>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Todas as Turmas</h2>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newSerieModal">
+      <i class="bi bi-palette"></i> Nova Série
+    </button>
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newTurmaModal">
+      <i class="bi bi-plus-circle"></i> Cadastrar Turma
+    </button>
+    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#manageTurmasModal">
+      <i class="bi bi-gear"></i> Gerenciar Turmas
+    </button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newClassModal">
+      <i class="bi bi-plus-circle"></i> Nova Turma (com Disciplina)
+    </button>
+  </div>
 </div>
 
-<div class="row">
+<ul class="nav nav-tabs mb-4" id="serieTabs">
+  <li class="nav-item">
+    <button class="nav-link active" data-serie="all" onclick="filterBySerie('all')">
+      Todas
+    </button>
+  </li>
+  <% series.forEach(function(s) { %>
+    <li class="nav-item d-flex align-items-center">
+      <button class="nav-link d-flex align-items-center gap-1" data-serie="<%= s.id %>" onclick="filterBySerie('<%= s.id %>')" style="border-bottom-color: <%= s.color || '#dee2e6' %>;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<%= s.color || '#6c757d' %>;"></span>
+        <%= s.name %>
+        <form action="/series/<%= s.id %>/delete" method="POST" class="d-inline ms-1" onsubmit="return confirm('Excluir série <%= s.name %>?');">
+          <button class="btn btn-sm p-0 text-danger" title="Excluir série"><i class="bi bi-x-circle"></i></button>
+        </form>
+      </button>
+    </li>
+  <% }); %>
+</ul>
+
+<div class="row" id="classCardsContainer">
   <% if (classes.length > 0) { %>
     <% classes.forEach(function(c) { %>
-      <div class="col-md-4 mb-4">
+      <div class="col-md-4 mb-4 class-card" data-serie="<%= c.Turma ? c.Turma.serieId : '' %>">
         <div class="card h-100">
           <div class="card-body">
             <h5 class="card-title"><%= c.name %></h5>
-            <h6 class="card-subtitle mb-2 text-muted"><%= c.subject || 'Sem disciplina especificada' %></h6>
+            <h6 class="card-subtitle mb-2 text-muted"><%= c.subject || 'Sem disciplina' %></h6>
+            <% if (c.baseTecnica) { %>
+              <span class="badge bg-info"><%= c.baseTecnica %></span>
+            <% } %>
             <% if (isSecretaria && c.Teacher) { %>
               <span class="badge bg-secondary"><%= c.Teacher.name %></span>
             <% } %>
@@ -53,12 +86,31 @@
               </div>
               <div class="modal-body">
                 <div class="mb-3">
-                  <label>Nome da Turma</label>
-                  <input type="text" name="name" class="form-control" required value="<%= c.name %>">
+                  <label>Turma</label>
+                  <select name="turmaId" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    <% turmas.forEach(function(t) { %>
+                      <option value="<%= t.id %>" <%= (c.turmaId === t.id) ? 'selected' : '' %>><%= t.name %></option>
+                    <% }); %>
+                  </select>
                 </div>
                 <div class="mb-3">
                   <label>Disciplina</label>
-                  <input type="text" name="subject" class="form-control" value="<%= c.subject %>">
+                  <select name="subject" class="form-select">
+                    <option value="">Sem disciplina</option>
+                    <% subjects.forEach(function(s) { %>
+                      <option value="<%= s %>" <%= (c.subject === s) ? 'selected' : '' %>><%= s %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label>Base Técnica</label>
+                  <select name="baseTecnica" class="form-select">
+                    <option value="">Sem base técnica</option>
+                    <% basesTecnicas.forEach(function(b) { %>
+                      <option value="<%= b %>" <%= (c.baseTecnica === b) ? 'selected' : '' %>><%= b %></option>
+                    <% }); %>
+                  </select>
                 </div>
               </div>
               <div class="modal-footer">
@@ -78,15 +130,39 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
-                <p>Uma nova turma será criada com o nome <strong><%= c.name %></strong> e todos os alunos atuais serão copiados para ela.</p>
+                <p>Uma nova turma será criada com todos os alunos atuais copiados para ela.</p>
                 <div class="mb-3">
-                  <label>Nova Disciplina</label>
-                  <input type="text" name="newSubject" class="form-control" required placeholder="Ex: Física">
+                  <label>Turma</label>
+                  <select name="turmaId" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    <% turmas.forEach(function(t) { %>
+                      <option value="<%= t.id %>"><%= t.name %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label>Disciplina</label>
+                  <select name="subject" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    <% subjects.forEach(function(s) { %>
+                      <option value="<%= s %>"><%= s %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label>Base Técnica</label>
+                  <select name="baseTecnica" class="form-select">
+                    <option value="">Sem base técnica</option>
+                    <% basesTecnicas.forEach(function(b) { %>
+                      <option value="<%= b %>"><%= b %></option>
+                    <% }); %>
+                  </select>
                 </div>
                 <% if (isSecretaria) { %>
                   <div class="mb-3">
-                    <label>Professor responsável</label>
-                    <select name="teacherId" class="form-select" required>
+                    <label>Professor responsável <span class="text-muted">(opcional)</span></label>
+                    <select name="teacherId" class="form-select">
+                      <option value="">Sem professor</option>
                       <% teachers.forEach(function(t) { %>
                         <option value="<%= t.id %>"><%= t.name %></option>
                       <% }); %>
@@ -107,10 +183,36 @@
   <% } %>
 </div>
 
-<div class="modal fade" id="newClassModal" tabindex="-1">
+<div class="modal fade" id="newSerieModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form action="/classes" method="POST">
+      <form action="/series" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Nova Série</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>Nome da Série</label>
+            <input type="text" name="name" class="form-control" required placeholder="Ex: 1º Ano, 2º Ano, 1ºC">
+          </div>
+          <div class="mb-3">
+            <label>Cor</label>
+            <input type="color" name="color" class="form-control form-control-color" value="#0d6efd">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="newTurmaModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="/turmas" method="POST">
         <div class="modal-header">
           <h5 class="modal-title">Cadastrar Turma</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -121,13 +223,64 @@
             <input type="text" name="name" class="form-control" required placeholder="Ex: 7º Ano A">
           </div>
           <div class="mb-3">
+            <label>Série</label>
+            <select name="serieId" class="form-select">
+              <option value="">Sem série</option>
+              <% series.forEach(function(s) { %>
+                <option value="<%= s.id %>"><%= s.name %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="newClassModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="/classes" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Nova Turma (com Disciplina)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>Turma</label>
+            <select name="turmaId" class="form-select" required>
+              <option value="">Selecione uma turma...</option>
+              <% turmas.forEach(function(t) { %>
+                <option value="<%= t.id %>"><%= t.name %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="mb-3">
             <label>Disciplina</label>
-            <input type="text" name="subject" class="form-control" placeholder="Ex: Matemática">
+            <select name="subject" class="form-select" required>
+              <option value="">Selecione uma disciplina...</option>
+              <% subjects.forEach(function(s) { %>
+                <option value="<%= s %>"><%= s %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label>Base Técnica</label>
+            <select name="baseTecnica" class="form-select">
+              <option value="">Selecione...</option>
+              <% basesTecnicas.forEach(function(b) { %>
+                <option value="<%= b %>"><%= b %></option>
+              <% }); %>
+            </select>
           </div>
           <% if (isSecretaria) { %>
             <div class="mb-3">
-              <label>Professor responsável</label>
-              <select name="teacherId" class="form-select" required>
+              <label>Professor responsável <span class="text-muted">(opcional)</span></label>
+              <select name="teacherId" class="form-select">
+                <option value="">Sem professor</option>
                 <% teachers.forEach(function(t) { %>
                   <option value="<%= t.id %>"><%= t.name %></option>
                 <% }); %>
@@ -142,5 +295,79 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="manageTurmasModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Gerenciar Turmas</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Atribua cada turma a uma série para organizar o dashboard.</p>
+        <div class="table-responsive">
+          <table class="table">
+            <thead class="table-light">
+              <tr>
+                <th>Turma</th>
+                <th>Série</th>
+                <th class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (turmas.length > 0) { %>
+                <% turmas.forEach(function(t) { %>
+                  <tr>
+                    <form action="/turmas/<%= t.id %>/edit" method="POST">
+                      <td>
+                        <input type="text" name="name" class="form-control form-control-sm" value="<%= t.name %>" required>
+                      </td>
+                      <td>
+                        <select name="serieId" class="form-select form-select-sm">
+                          <option value="">Sem série</option>
+                          <% series.forEach(function(s) { %>
+                            <option value="<%= s.id %>" <%= (t.serieId === s.id) ? 'selected' : '' %>><%= s.name %></option>
+                          <% }); %>
+                        </select>
+                      </td>
+                      <td class="text-end">
+                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-lg"></i></button>
+                    </form>
+                    <form action="/turmas/<%= t.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Excluir turma <%= t.name %>? As aulas vinculadas serão mantidas.');">
+                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                      </td>
+                  </tr>
+                <% }); %>
+              <% } else { %>
+                <tr><td colspan="3" class="text-center text-muted">Nenhuma turma cadastrada.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function filterBySerie(serieId) {
+  document.querySelectorAll('#serieTabs .nav-link').forEach(function(tab) {
+    tab.classList.remove('active');
+  });
+  document.querySelector('#serieTabs .nav-link[data-serie="' + serieId + '"]').classList.add('active');
+
+  document.querySelectorAll('.class-card').forEach(function(card) {
+    if (serieId === 'all' || card.dataset.serie === serieId) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+</script>
 
 <%- include('footer') %>

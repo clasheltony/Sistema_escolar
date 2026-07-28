@@ -40,13 +40,12 @@ exports.transferStudent = async (req, res) => {
   try {
     const { classId, studentId } = req.params;
     const { targetClassId } = req.body;
-    const teacherId = req.session.teacherId;
 
     if (!targetClassId || targetClassId === classId) {
       return res.redirect(`/classes/${classId}`);
     }
 
-    const targetClass = await Class.findOne({ where: { id: targetClassId, teacherId } });
+    const targetClass = await Class.findByPk(targetClassId);
     if (!targetClass) {
       return res.status(404).send('Turma de destino não encontrada');
     }
