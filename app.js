@@ -81,6 +81,18 @@ sequelize.sync().then(async () => {
     console.log(`Conta secretaria criada: ${secretariaEmail} / admin123`);
   }
 
+  const tonyEmail = 'tonyferreira13@gmail.com';
+  const existingTony = await Teacher.findOne({ where: { email: tonyEmail } });
+  if (!existingTony) {
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    await Teacher.create({
+      name: 'Antonio Ferreira Dantas Neto',
+      email: tonyEmail,
+      password: hashedPassword
+    });
+    console.log(`Professor criado: ${tonyEmail} / admin123`);
+  }
+
   app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`Acesse: http://localhost:${PORT}`);
