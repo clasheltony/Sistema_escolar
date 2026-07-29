@@ -44,11 +44,10 @@ exports.getDashboard = async (req, res) => {
 
 exports.createClass = async (req, res) => {
   try {
-    const { turmaId, subject, baseTecnica } = req.body;
+    const { turmaName, subject, baseTecnica } = req.body;
     const teacherId = req.session.role === 'secretaria' ? (req.body.teacherId || null) : req.session.teacherId;
-    const turma = await Turma.findByPk(turmaId);
-    if (!turma) return res.status(400).send('Turma não encontrada');
-    await Class.create({ name: turma.name, turmaId, subject, baseTecnica: baseTecnica || null, teacherId });
+    const [turma] = await Turma.findOrCreate({ where: { name: turmaName }, defaults: { name: turmaName } });
+    await Class.create({ name: turma.name, turmaId: turma.id, subject, baseTecnica: baseTecnica || null, teacherId });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);

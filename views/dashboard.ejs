@@ -251,21 +251,12 @@
         <div class="modal-body">
           <div class="mb-3">
             <label>Turma</label>
-            <select name="turmaId" class="form-select" required>
-              <option value="">Selecione uma turma...</option>
-              <% turmas.forEach(function(t) { %>
-                <option value="<%= t.id %>"><%= t.name %></option>
-              <% }); %>
-            </select>
+            <input type="text" name="turmaName" class="form-control" required placeholder="Ex: 7º Ano A, 1º Ano B">
+            <div class="form-text">Digite o nome da turma. Se já existir, a disciplina será vinculada a ela.</div>
           </div>
           <div class="mb-3">
             <label>Disciplina</label>
-            <select name="subject" class="form-select" required>
-              <option value="">Selecione uma disciplina...</option>
-              <% subjects.forEach(function(s) { %>
-                <option value="<%= s %>"><%= s %></option>
-              <% }); %>
-            </select>
+            <input type="text" name="subject" class="form-control" required placeholder="Ex: Português, Matemática, Química...">
           </div>
           <div class="mb-3">
             <label>Base Técnica</label>
