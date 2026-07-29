@@ -72,15 +72,13 @@ exports.deleteClass = async (req, res) => {
 exports.updateClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const { turmaId, subject, baseTecnica } = req.body;
+    const { turmaName, subject, baseTecnica } = req.body;
     const where = req.session.role === 'secretaria' ? { id } : { id, teacherId: req.session.teacherId };
-    const updateData = { subject, baseTecnica: baseTecnica || null };
-    if (turmaId) {
-      const turma = await Turma.findByPk(turmaId);
-      if (turma) {
-        updateData.name = turma.name;
-        updateData.turmaId = turmaId;
-      }
+    const updateData = { subject: subject || null, baseTecnica: baseTecnica || null };
+    if (turmaName) {
+      const [turma] = await Turma.findOrCreate({ where: { name: turmaName }, defaults: { name: turmaName } });
+      updateData.name = turma.name;
+      updateData.turmaId = turma.id;
     }
     await Class.update(updateData, { where });
     res.redirect('/dashboard');

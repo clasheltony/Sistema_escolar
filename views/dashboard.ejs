@@ -87,21 +87,11 @@
               <div class="modal-body">
                 <div class="mb-3">
                   <label>Turma</label>
-                  <select name="turmaId" class="form-select" required>
-                    <option value="">Selecione...</option>
-                    <% turmas.forEach(function(t) { %>
-                      <option value="<%= t.id %>" <%= (c.turmaId === t.id) ? 'selected' : '' %>><%= t.name %></option>
-                    <% }); %>
-                  </select>
+                  <input type="text" name="turmaName" class="form-control" required value="<%= c.Turma ? c.Turma.name : '' %>" placeholder="Ex: 7º Ano A">
                 </div>
                 <div class="mb-3">
                   <label>Disciplina</label>
-                  <select name="subject" class="form-select">
-                    <option value="">Sem disciplina</option>
-                    <% subjects.forEach(function(s) { %>
-                      <option value="<%= s %>" <%= (c.subject === s) ? 'selected' : '' %>><%= s %></option>
-                    <% }); %>
-                  </select>
+                  <input type="text" name="subject" class="form-control" value="<%= c.subject || '' %>" placeholder="Ex: Português, Matemática...">
                 </div>
                 <div class="mb-3">
                   <label>Base Técnica</label>
