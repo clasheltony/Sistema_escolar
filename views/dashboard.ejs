@@ -318,25 +318,27 @@
               <% if (turmas.length > 0) { %>
                 <% turmas.forEach(function(t) { %>
                   <tr>
-                    <form action="/turmas/<%= t.id %>/edit" method="POST">
-                      <td>
-                        <input type="text" name="name" class="form-control form-control-sm" value="<%= t.name %>" required>
-                      </td>
-                      <td>
-                        <select name="serieId" class="form-select form-select-sm">
-                          <option value="">Sem série</option>
-                          <% series.forEach(function(s) { %>
-                            <option value="<%= s.id %>" <%= (t.serieId === s.id) ? 'selected' : '' %>><%= s.name %></option>
-                          <% }); %>
-                        </select>
-                      </td>
-                      <td class="text-end">
-                        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-lg"></i></button>
-                    </form>
-                    <form action="/turmas/<%= t.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Excluir turma <%= t.name %>? As aulas vinculadas serão mantidas.');">
-                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                    </form>
-                      </td>
+                    <td>
+                      <input type="text" id="turma-name-<%= t.id %>" class="form-control form-control-sm" value="<%= t.name %>" required>
+                    </td>
+                    <td>
+                      <select id="turma-serie-<%= t.id %>" class="form-select form-select-sm">
+                        <option value="">Sem série</option>
+                        <% series.forEach(function(s) { %>
+                          <option value="<%= s.id %>" <%= (t.serieId === s.id) ? 'selected' : '' %>><%= s.name %></option>
+                        <% }); %>
+                      </select>
+                    </td>
+                    <td class="text-end">
+                      <form action="/turmas/<%= t.id %>/edit" method="POST" class="d-inline">
+                        <input type="hidden" name="name" id="edit-name-<%= t.id %>">
+                        <input type="hidden" name="serieId" id="edit-serie-<%= t.id %>">
+                        <button type="submit" class="btn btn-sm btn-primary" onclick="document.getElementById('edit-name-<%= t.id %>').value=document.getElementById('turma-name-<%= t.id %>').value;document.getElementById('edit-serie-<%= t.id %>').value=document.getElementById('turma-serie-<%= t.id %>').value;"><i class="bi bi-check-lg"></i></button>
+                      </form>
+                      <form action="/turmas/<%= t.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Excluir turma <%= t.name %>? As aulas vinculadas serão mantidas.');">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                      </form>
+                    </td>
                   </tr>
                 <% }); %>
               <% } else { %>
