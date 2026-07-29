@@ -363,10 +363,10 @@ function filterBySerie(serieId) {
   document.querySelector('#serieTabs .nav-link[data-serie="' + serieId + '"]').classList.add('active');
 
   document.querySelectorAll('.class-card').forEach(function(card) {
-    if (serieId === 'all' || card.dataset.serie === serieId) {
-      card.style.display = '';
+    if (serieId === 'all') {
+      card.style.display = card.dataset.serie === '' ? '' : 'none';
     } else {
-      card.style.display = 'none';
+      card.style.display = card.dataset.serie === serieId ? '' : 'none';
     }
   });
 }

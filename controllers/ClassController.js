@@ -1,4 +1,4 @@
-const { Class, Student, Teacher, Turma, Serie } = require('../models');
+const { Class, Student, Teacher, Turma, Serie, Attendance, Grade } = require('../models');
 const { Op } = require('sequelize');
 
 const SUBJECTS = [
@@ -59,8 +59,10 @@ exports.createClass = async (req, res) => {
 exports.deleteClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const where = req.session.role === 'secretaria' ? { id } : { id, teacherId: req.session.teacherId };
-    await Class.destroy({ where });
+    await Grade.destroy({ where: { classId: id } });
+    await Attendance.destroy({ where: { classId: id } });
+    await Student.destroy({ where: { classId: id } });
+    await Class.destroy({ where: { id } });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);
@@ -180,10 +182,7 @@ exports.updateTurma = async (req, res) => {
 exports.deleteTurma = async (req, res) => {
   try {
     const { id } = req.params;
-    const classCount = await Class.count({ where: { turmaId: id } });
-    if (classCount > 0) {
-      return res.status(400).send('Não é possível excluir: existem turmas vinculadas a esta turma');
-    }
+    await Class.update({ turmaId: null }, { where: { turmaId: id } });
     await Turma.destroy({ where: { id } });
     res.redirect('/dashboard');
   } catch (err) {

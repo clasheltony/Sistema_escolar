@@ -42,19 +42,19 @@ Class.belongsTo(Turma, { foreignKey: 'turmaId' });
 Teacher.hasMany(Bimester, { foreignKey: 'teacherId' });
 Bimester.belongsTo(Teacher, { foreignKey: 'teacherId' });
 
-Class.hasMany(Student, { foreignKey: 'classId' });
+Class.hasMany(Student, { foreignKey: 'classId', onDelete: 'CASCADE' });
 Student.belongsTo(Class, { foreignKey: 'classId' });
 
-Student.hasMany(Attendance, { foreignKey: 'studentId' });
+Student.hasMany(Attendance, { foreignKey: 'studentId', onDelete: 'CASCADE' });
 Attendance.belongsTo(Student, { foreignKey: 'studentId' });
 
-Class.hasMany(Attendance, { foreignKey: 'classId' });
+Class.hasMany(Attendance, { foreignKey: 'classId', onDelete: 'CASCADE' });
 Attendance.belongsTo(Class, { foreignKey: 'classId' });
 
-Student.hasMany(Grade, { foreignKey: 'studentId' });
+Student.hasMany(Grade, { foreignKey: 'studentId', onDelete: 'CASCADE' });
 Grade.belongsTo(Student, { foreignKey: 'studentId' });
 
-Class.hasMany(Grade, { foreignKey: 'classId' });
+Class.hasMany(Grade, { foreignKey: 'classId', onDelete: 'CASCADE' });
 Grade.belongsTo(Class, { foreignKey: 'classId' });
 
 async function addToSyncQueue(tableName, recordId, operation, recordData) {
