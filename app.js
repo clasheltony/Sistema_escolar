@@ -29,17 +29,17 @@ sequelize.sync().then(async () => {
   try {
     await sequelize.query(`ALTER TABLE "Classes" ADD COLUMN "turmaId" TEXT REFERENCES "Turmas"("id");`);
     console.log('Coluna turmaId adicionada');
-  } catch (e) { if (!e.message.includes('duplicate column')) console.error(e.message); }
+  } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
 
   try {
     await sequelize.query(`ALTER TABLE "Classes" ADD COLUMN "baseTecnica" TEXT;`);
     console.log('Coluna baseTecnica adicionada');
-  } catch (e) { if (!e.message.includes('duplicate column')) console.error(e.message); }
+  } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
 
   try {
     await sequelize.query(`ALTER TABLE "Turmas" ADD COLUMN "serieId" TEXT REFERENCES "Series"("id");`);
     console.log('Coluna serieId adicionada');
-  } catch (e) { if (!e.message.includes('duplicate column')) console.error(e.message); }
+  } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
 
   const classCount = await Class.count();
   if (classCount > 0) {

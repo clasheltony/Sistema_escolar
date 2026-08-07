@@ -345,7 +345,7 @@ function filterBySerie(serieId) {
 
   document.querySelectorAll('.class-card').forEach(function(card) {
     if (serieId === 'all') {
-      card.style.display = card.dataset.serie === '' ? '' : 'none';
+      card.style.display = '';
     } else {
       card.style.display = card.dataset.serie === serieId ? '' : 'none';
     }

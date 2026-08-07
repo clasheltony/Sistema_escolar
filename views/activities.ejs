@@ -250,7 +250,7 @@
           document.querySelectorAll('#attendanceTable input[type="radio"]').forEach(radio => {
             const parts = radio.name.split('_');
             const lessonNum = parseInt(parts[1]);
-            const studentId = parseInt(parts[2]);
+            const studentId = parts[2];
             const studentData = data.data && data.data[studentId];
             const savedStatus = studentData ? studentData[lessonNum] : null;
 
