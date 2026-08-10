@@ -1,6 +1,22 @@
 const { Op } = require('sequelize');
 const { Class, Student, Attendance, Grade, Bimester, Teacher } = require('../models');
 
+function dedupeBimesters(bimesters) {
+  const seen = new Map();
+  const result = [];
+  for (const b of bimesters) {
+    const existing = seen.get(b.name);
+    if (!existing) {
+      seen.set(b.name, b);
+      result.push(b);
+    } else if (!existing.startDate && b.startDate) {
+      seen.set(b.name, b);
+      result[result.indexOf(existing)] = b;
+    }
+  }
+  return result;
+}
+
 async function calcBimesterData(studentId, startDate, endDate, dateFilter) {
   if (!dateFilter) {
     dateFilter = startDate && endDate
@@ -72,6 +88,7 @@ exports.getReport = async (req, res) => {
       ]);
       bimesters = await Bimester.findAll({ where: { teacherId: bimesterOwnerId }, order: [['name', 'ASC']] });
     }
+    bimesters = dedupeBimesters(bimesters);
     const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
 
     let filteredClasses = classes;
@@ -173,6 +190,7 @@ exports.getRecuperacaoReport = async (req, res) => {
       ]);
       bimesters = await Bimester.findAll({ where: { teacherId: bimesterOwnerId }, order: [['name', 'ASC']] });
     }
+    bimesters = dedupeBimesters(bimesters);
     const teachers = isSecretaria ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] }) : [];
 
     let filteredClasses = classes;
