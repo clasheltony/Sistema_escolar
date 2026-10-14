@@ -25,6 +25,7 @@ function parseFrom(raw) {
   return { name: String(raw).trim(), email: String(raw).trim() };
 }
 const from = parseFrom(fromRaw);
+const senderValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(from.email || '');
 
 const port = Number(SMTP_PORT) || 465;
 const smtpConfigured = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
@@ -64,6 +65,19 @@ if (CURRENT_MODE === 'dev') {
   console.warn('[mailer] Os e-mails serao apenas exibidos no console (modo dev).');
 } else {
   console.log(`[mailer] Envio de e-mail ativo: ${describeMode()}`);
+  if (!senderValid) {
+    console.error('[mailer] ATENCAO: remetente (MAIL_FROM) ausente ou invalido.');
+    console.error('[mailer] Defina no Render: MAIL_FROM="Sistema Escolar <seuemail-verificado@gmail.com>"');
+  } else {
+    console.log(`[mailer] Remetente configurado: "${from.name}" <${from.email}>`);
+  }
+}
+
+// Erro amigavel (e no log) se tentar enviar sem remetente valido.
+function assertSender() {
+  if ((CURRENT_MODE === 'brevo' || CURRENT_MODE === 'sendgrid') && !senderValid) {
+    throw new Error('Remetente (MAIL_FROM) ausente ou invalido. Defina MAIL_FROM com um e-mail verificado no provedor.');
+  }
 }
 
 async function fetchWithTimeout(url, options, ms = 12000) {
@@ -124,6 +138,7 @@ async function sendViaSendgrid({ to, subject, text, html }) {
 }
 
 async function sendMail({ to, subject, text, html }) {
+  assertSender();
   switch (mode()) {
     case 'brevo':
       return sendViaBrevo({ to, subject, text, html });
