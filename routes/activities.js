@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const activityController = require('../controllers/ActivityController');
+const { requireClassAccess } = require('../middleware/auth');
+
+router.use(requireClassAccess('classId'));
 
 router.get('/', activityController.getActivities);
 router.get('/attendance/data', activityController.getAttendanceData);

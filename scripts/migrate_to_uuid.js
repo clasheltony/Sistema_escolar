@@ -96,7 +96,7 @@ async function migrate() {
   const bimesterMap = new Map(oldBimesters.map(b => [b.id, uuid()]));
 
   // Now sync new models (force: true drops and recreates tables)
-  const { sequelize, Teacher, Class, Student, Attendance, Grade, Bimester, SyncQueue } = require('../models');
+  const { sequelize, Teacher, Class, Student, Attendance, Grade, Bimester } = require('../models');
   await sequelize.sync({ force: true });
   console.log('Novas tabelas criadas com schema UUID.\n');
 

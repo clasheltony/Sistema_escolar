@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Class, Student, Attendance, Grade, Bimester, Teacher } = require('../models');
+const { classScope } = require('../middleware/auth');
 
 function dedupeBimesters(bimesters) {
   const seen = new Map();
@@ -72,6 +73,7 @@ exports.getReport = async (req, res) => {
     const isSecretaria = req.session.role === 'secretaria';
 
     const classes = await Class.findAll({
+      where: classScope(req),
       include: [{ model: Teacher, attributes: ['name'] }]
     });
 
@@ -96,7 +98,11 @@ exports.getReport = async (req, res) => {
       filteredClasses = classes.filter(c => c.teacherId === selectedTeacherId);
     }
 
-    const classId = req.query.classId || (filteredClasses.length > 0 ? filteredClasses[0].id : null);
+    const requestedClassId = req.query.classId || '';
+    if (requestedClassId && !filteredClasses.some(c => c.id === requestedClassId)) {
+      return res.status(404).send('Turma não encontrada');
+    }
+    const classId = requestedClassId || (filteredClasses.length > 0 ? filteredClasses[0].id : null);
     const selectedBimesterId = req.query.bimesterId || '';
     const selectedSemester = req.query.semester || '';
 
@@ -174,6 +180,7 @@ exports.getRecuperacaoReport = async (req, res) => {
     const teacherFilter = isSecretaria ? {} : { teacherId: req.session.teacherId };
 
     const classes = await Class.findAll({
+      where: teacherFilter,
       include: [{ model: Teacher, attributes: ['name'] }]
     });
 

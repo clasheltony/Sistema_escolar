@@ -2,7 +2,7 @@
 title Sistema Gestao Escolar
 
 echo ============================================
-echo   Sistema Gestao Escolar - Online/Offline
+echo   Sistema Gestao Escolar - Online (Supabase)
 echo ============================================
 echo.
 
@@ -37,6 +37,24 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo [OK] Node.js encontrado
 echo.
+
+:: Verificar .env (necessario para o banco na nuvem)
+if not exist ".env" (
+    echo ============================================
+    echo   [ATENCAO] Arquivo .env nao encontrado!
+    echo ============================================
+    echo.
+    echo Este sistema usa o banco na nuvem (Supabase).
+    echo Crie um arquivo chamado .env na pasta do
+    echo sistema, contendo a linha:
+    echo.
+    echo   DATABASE_URL=postgresql://usuario:senha@host:6543/postgres
+    echo.
+    echo Sem isso o sistema nao inicia.
+    echo.
+    pause
+    exit /b 1
+)
 
 :: Verificar dependencias
 if not exist "node_modules" (

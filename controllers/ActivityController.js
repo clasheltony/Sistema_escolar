@@ -1,5 +1,4 @@
 const { Class, Student, Attendance, Grade } = require('../models');
-const { addToSyncQueue } = require('../services/syncService');
 
 exports.getActivities = async (req, res) => {
   try {
@@ -73,11 +72,6 @@ exports.postAttendance = async (req, res) => {
     const count = parseInt(lessonCount) || 1;
     const topic = (lessonTopic || '').trim();
 
-    // Queue deletion of old records for this date before bulk delete
-    const oldRecords = await Attendance.findAll({ where: { classId, date } });
-    for (const record of oldRecords) {
-      await addToSyncQueue('Attendance', record.id, 'DELETE', { id: record.id });
-    }
     await Attendance.destroy({ where: { classId, date } });
 
     const keys = Object.keys(req.body);
@@ -144,10 +138,6 @@ exports.deleteAttendance = async (req, res) => {
     const { classId } = req.params;
     const { date } = req.body;
 
-    const oldRecords = await Attendance.findAll({ where: { classId, date } });
-    for (const record of oldRecords) {
-      await addToSyncQueue('Attendance', record.id, 'DELETE', { id: record.id });
-    }
     await Attendance.destroy({ where: { classId, date } });
     res.redirect(`/classes/${classId}/activities`);
   } catch (err) {
@@ -161,11 +151,6 @@ exports.postGrade = async (req, res) => {
     const classId = req.params.classId;
     const { activityName, type, date } = req.body;
 
-    // Queue deletion of old grades for this activity before bulk delete
-    const oldGrades = await Grade.findAll({ where: { classId, activityName, type, date } });
-    for (const record of oldGrades) {
-      await addToSyncQueue('Grade', record.id, 'DELETE', { id: record.id });
-    }
     await Grade.destroy({ where: { classId, activityName, type, date } });
 
     const students = await Student.findAll({ where: { classId } });
@@ -212,10 +197,6 @@ exports.deleteGrade = async (req, res) => {
     const { classId } = req.params;
     const { activityName, type, date } = req.body;
 
-    const oldGrades = await Grade.findAll({ where: { classId, activityName, type, date } });
-    for (const record of oldGrades) {
-      await addToSyncQueue('Grade', record.id, 'DELETE', { id: record.id });
-    }
     await Grade.destroy({ where: { classId, activityName, type, date } });
     res.redirect(`/classes/${classId}/activities`);
   } catch (err) {
@@ -251,7 +232,6 @@ exports.deleteSingleGrade = async (req, res) => {
     const { classId, gradeId } = req.params;
     const grade = await Grade.findOne({ where: { id: gradeId, classId } });
     if (grade) {
-      await addToSyncQueue('Grade', grade.id, 'DELETE', { id: grade.id });
       await grade.destroy();
     }
     res.redirect(`/classes/${classId}/activities#gerenciar`);

@@ -13,8 +13,6 @@
     .navbar { box-shadow: 0 2px 4px rgba(0,0,0,.1); }
     .card { box-shadow: 0 4px 6px rgba(0,0,0,.05); border: none; border-radius: 10px; }
     [data-bs-theme="dark"] .card-footer.bg-white { background-color: var(--bs-body-bg) !important; }
-    #syncStatus { cursor: pointer; }
-    #syncStatus.syncing { pointer-events: none; opacity: 0.7; }
   </style>
   <script>
     (function() {
@@ -47,9 +45,6 @@
               <a class="nav-link" href="/settings">Configurações</a>
             </li>
           </ul>
-          <span id="syncStatus" class="navbar-text text-light me-3 small" title="Clique para sincronizar" onclick="runSync()">
-            <i class="bi bi-arrow-repeat"></i> <span id="syncLabel">Verificando...</span>
-          </span>
           <span class="navbar-text text-light me-3">
             Olá, <%= teacherName %>
           </span>
@@ -64,47 +59,5 @@
   </div>
 
   <script src="/js/bootstrap.bundle.min.js"></script>
-  <script>
-    async function checkSyncStatus() {
-      var el = document.getElementById('syncStatus');
-      if (!el) return;
-      try {
-        var res = await fetch('/sync/status');
-        var data = await res.json();
-        if (data.online) {
-          el.innerHTML = '<i class="bi bi-cloud-check-fill text-success"></i> <span id="syncLabel">Online</span>';
-        } else {
-          el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
-        }
-      } catch(e) {
-        el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
-      }
-    }
-
-    async function runSync() {
-      var el = document.getElementById('syncStatus');
-      if (!el || el.classList.contains('syncing')) return;
-      el.classList.add('syncing');
-      el.innerHTML = '<i class="bi bi-arrow-repeat text-info"></i> <span id="syncLabel">Sincronizando...</span>';
-      try {
-        var res = await fetch('/sync/run', { method: 'POST' });
-        var data = await res.json();
-        if (data.online) {
-          el.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> <span id="syncLabel">Sincronizado</span>';
-          setTimeout(checkSyncStatus, 3000);
-        } else {
-          el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
-        }
-      } catch(e) {
-        el.innerHTML = '<i class="bi bi-cloud-slash-fill text-warning"></i> <span id="syncLabel">Offline</span>';
-      }
-      el.classList.remove('syncing');
-    }
-
-    if (document.getElementById('syncStatus')) {
-      checkSyncStatus();
-      setInterval(checkSyncStatus, 60000);
-    }
-  </script>
 </body>
 </html>

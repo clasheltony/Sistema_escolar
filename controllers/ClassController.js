@@ -1,5 +1,6 @@
 const { Class, Student, Teacher, Turma, Serie, Attendance, Grade } = require('../models');
 const { Op } = require('sequelize');
+const { classScope } = require('../middleware/auth');
 
 const SUBJECTS = [
   'Português', 'Matemática', 'Química', 'Física', 'História',
@@ -11,13 +12,17 @@ const BASES_TECNICAS = ['Análises Clínicas', 'Informática'];
 exports.getDashboard = async (req, res) => {
   try {
     const isSecretaria = req.session.role === 'secretaria';
-    const teachers = await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] });
+    const scope = isSecretaria ? {} : { teacherId: req.session.teacherId };
+    const teachers = isSecretaria
+      ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] })
+      : [];
     const series = await Serie.findAll({ order: [['name', 'ASC']] });
     const turmas = await Turma.findAll({
       include: [{ model: Serie, attributes: ['id', 'name', 'color'] }],
       order: [['name', 'ASC']]
     });
     const classes = await Class.findAll({
+      where: scope,
       include: [
         { model: Teacher, attributes: ['name'] },
         { model: Turma, attributes: ['id', 'name', 'serieId'] }
@@ -142,7 +147,7 @@ exports.getClassDetails = async (req, res) => {
     });
 
     const otherClasses = await Class.findAll({
-      where: { id: { [Op.ne]: id } },
+      where: { id: { [Op.ne]: id }, ...classScope(req) },
       order: [['name', 'ASC']]
     });
 

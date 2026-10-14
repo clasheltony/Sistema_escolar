@@ -1,24 +1,40 @@
 require('dotenv').config();
 const { Sequelize, DataTypes } = require('sequelize');
-const path = require('path');
+const dns = require('dns');
 
-const sequelize = process.env.DATABASE_URL
-  ? new Sequelize(process.env.DATABASE_URL, {
-      dialect: 'postgres',
-      protocol: 'postgres',
-      logging: false,
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      }
-    })
-  : new Sequelize({
-      dialect: 'sqlite',
-      storage: path.join(__dirname, '..', 'database.sqlite'),
-      logging: false
-    });
+// Alguns provedores (e redes locais) nao resolvem corretamente os hosts do Supabase.
+// Forcamos DNS publico + prioridade IPv4, como o projeto ja fazia antes.
+dns.setDefaultResultOrder('ipv4first');
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+
+// O sistema opera exclusivamente com o banco na nuvem (Supabase/PostgreSQL).
+// Sem DATABASE_URL nao ha como iniciar com seguranca.
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error('\n[ERRO FATAL] A variavel DATABASE_URL nao esta configurada.');
+  console.error('Este sistema usa exclusivamente o banco na nuvem (Supabase/PostgreSQL).');
+  console.error('Crie um arquivo .env na raiz do projeto com a linha:');
+  console.error('  DATABASE_URL=postgresql://USUARIO:SENHA@SEU_HOST:6543/postgres\n');
+  process.exit(1);
+}
+
+const sequelize = new Sequelize(connectionString, {
+  dialect: 'postgres',
+  protocol: 'postgres',
+  logging: false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  },
+  dialectOptions: {
+    ssl: {
+      rejectUnauthorized: false
+    },
+    keepAlive: true
+  }
+});
 
 const Teacher = require('./Teacher')(sequelize, DataTypes);
 const Serie = require('./Serie')(sequelize, DataTypes);
@@ -28,7 +44,6 @@ const Student = require('./Student')(sequelize, DataTypes);
 const Attendance = require('./Attendance')(sequelize, DataTypes);
 const Grade = require('./Grade')(sequelize, DataTypes);
 const Bimester = require('./Bimester')(sequelize, DataTypes);
-const SyncQueue = require('./SyncQueue')(sequelize, DataTypes);
 
 Teacher.hasMany(Class, { foreignKey: 'teacherId' });
 Class.belongsTo(Teacher, { foreignKey: 'teacherId' });
@@ -57,33 +72,6 @@ Grade.belongsTo(Student, { foreignKey: 'studentId' });
 Class.hasMany(Grade, { foreignKey: 'classId', onDelete: 'CASCADE' });
 Grade.belongsTo(Class, { foreignKey: 'classId' });
 
-async function addToSyncQueue(tableName, recordId, operation, recordData) {
-  try {
-    await SyncQueue.create({
-      tableName,
-      recordId,
-      operation,
-      data: recordData ? JSON.stringify(recordData) : null
-    });
-  } catch (err) {
-    console.error('sync error:', err.message);
-  }
-}
-
-[Teacher, Serie, Turma, Class, Student, Attendance, Grade, Bimester].forEach(Model => {
-  Model.addHook('afterCreate', (instance) => {
-    addToSyncQueue(Model.name, instance.id, 'CREATE', instance.toJSON());
-  });
-
-  Model.addHook('afterUpdate', (instance) => {
-    addToSyncQueue(Model.name, instance.id, 'UPDATE', instance.toJSON());
-  });
-
-  Model.addHook('afterDestroy', (instance) => {
-    addToSyncQueue(Model.name, instance.id, 'DELETE', { id: instance.id });
-  });
-});
-
 module.exports = {
   sequelize,
   Teacher,
@@ -93,6 +81,5 @@ module.exports = {
   Student,
   Attendance,
   Grade,
-  Bimester,
-  SyncQueue
+  Bimester
 };

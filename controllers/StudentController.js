@@ -1,4 +1,5 @@
 const { Student, Attendance, Grade, Class, sequelize } = require('../models');
+const { classScope } = require('../middleware/auth');
 
 exports.addStudent = async (req, res) => {
   try {
@@ -45,7 +46,9 @@ exports.transferStudent = async (req, res) => {
       return res.redirect(`/classes/${classId}`);
     }
 
-    const targetClass = await Class.findByPk(targetClassId);
+    const targetClass = await Class.findOne({
+      where: { id: targetClassId, ...classScope(req) }
+    });
     if (!targetClass) {
       return res.status(404).send('Turma de destino não encontrada');
     }
