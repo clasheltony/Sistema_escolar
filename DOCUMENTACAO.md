@@ -240,13 +240,36 @@ A nova senha precisa ter ao menos **6 caracteres**.
 | resetPasswordToken | STRING | Hash do token de redefinição (temporário) |
 | resetPasswordExpires | DATE | Expiração do token de redefinição |
 
-### Class (Turma)
+### Class (Turma + Disciplina)
 | Campo | Tipo | Descrição |
 |---|---|---|
 | id | UUID (PK) | Identificador único |
 | name | STRING | Nome da turma (ex: 7º Ano A) |
 | subject | STRING | Disciplina |
+| baseTecnica | STRING | Base técnica (opcional) |
+| turmaId | UUID (FK) | Turma (agrupamento) |
 | teacherId | UUID (FK) | Professor responsável |
+
+### Turma (Agrupamento)
+| Campo | Tipo | Descrição |
+|---|---|---|
+| id | UUID (PK) | Identificador único |
+| name | STRING | Nome da turma (ex: 1º C) |
+| serieId | UUID (FK) | Série (opcional) |
+| teacherId | UUID (FK) | Professor dono (isolamento por conta) |
+
+### Serie (Série)
+| Campo | Tipo | Descrição |
+|---|---|---|
+| id | UUID (PK) | Identificador único |
+| name | STRING | Nome da série (ex: 1º C) |
+| color | STRING | Cor da aba no dashboard |
+| teacherId | UUID (FK) | Professor dono (isolamento por conta) |
+
+> 🔒 **Isolamento:** cada professor vê e gerencia **apenas** as suas turmas, séries e
+> turmas-com-disciplina. A **Secretaria** vê as de todos. Turmas/séries antigas
+> (criadas antes do isolamento) são atribuídas automaticamente ao professor dono
+> na primeira inicialização após a atualização.
 
 ### Student (Aluno)
 | Campo | Tipo | Descrição |

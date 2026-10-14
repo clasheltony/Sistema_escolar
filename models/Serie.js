@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
     color: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    teacherId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
   return Serie;

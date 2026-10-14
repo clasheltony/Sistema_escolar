@@ -43,6 +43,17 @@ sequelize.sync().then(async () => {
     console.log('Coluna serieId adicionada');
   } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
 
+  // Isolamento por professor: turmas e series passam a ter dono (teacherId).
+  try {
+    await sequelize.query(`ALTER TABLE "Series" ADD COLUMN "teacherId" UUID REFERENCES "Teachers"("id");`);
+    console.log('Coluna teacherId adicionada em Series');
+  } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
+
+  try {
+    await sequelize.query(`ALTER TABLE "Turmas" ADD COLUMN "teacherId" UUID REFERENCES "Teachers"("id");`);
+    console.log('Coluna teacherId adicionada em Turmas');
+  } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
+
   // Colunas para confirmacao de e-mail e redefinicao de senha.
   const teacherColumns = [
     [`ALTER TABLE "Teachers" ADD COLUMN "emailVerified" BOOLEAN NOT NULL DEFAULT TRUE;`, 'Coluna emailVerified adicionada'],
@@ -71,6 +82,61 @@ sequelize.sync().then(async () => {
       }
       console.log('Turmas migradas dos dados existentes');
     }
+  }
+
+  // Atribui dono (teacherId) as turmas/series que ainda nao tem, com base nas
+  // turmas-com-disciplina (Classes). Ajuda a migrar dados criados antes do
+  // isolamento. Idempotente: depois da primeira execucao nao sobra nada sem dono.
+  try {
+    const semDonoTurmas = await Turma.count({ where: { teacherId: null } });
+    const semDonoSeries = await Serie.count({ where: { teacherId: null } });
+    if (semDonoTurmas > 0 || semDonoSeries > 0) {
+      const classes = await Class.findAll({ attributes: ['turmaId', 'teacherId'] });
+      const contagemPorProfessor = {};
+      const donosPorTurma = {};
+      for (const c of classes) {
+        if (!c.teacherId) continue;
+        contagemPorProfessor[c.teacherId] = (contagemPorProfessor[c.teacherId] || 0) + 1;
+        if (c.turmaId) {
+          donosPorTurma[c.turmaId] = donosPorTurma[c.turmaId] || {};
+          donosPorTurma[c.turmaId][c.teacherId] = (donosPorTurma[c.turmaId][c.teacherId] || 0) + 1;
+        }
+      }
+
+      // Professor "principal" = o que possui mais turmas-com-disciplina.
+      let principal = null;
+      let maior = 0;
+      for (const [id, n] of Object.entries(contagemPorProfessor)) {
+        if (n > maior) { maior = n; principal = id; }
+      }
+      if (!principal) {
+        const primeiro = await Teacher.findOne({ order: [['createdAt', 'ASC']] });
+        principal = primeiro ? primeiro.id : null;
+      }
+
+      if (principal) {
+        const escolherDono = (mapa) => {
+          const ordenado = Object.entries(mapa).sort((a, b) => b[1] - a[1]);
+          return ordenado.length ? ordenado[0][0] : principal;
+        };
+
+        for (const t of await Turma.findAll({ where: { teacherId: null } })) {
+          const dono = donosPorTurma[t.id] ? escolherDono(donosPorTurma[t.id]) : principal;
+          await t.update({ teacherId: dono });
+        }
+
+        for (const s of await Serie.findAll({ where: { teacherId: null } })) {
+          const turmas = await Turma.findAll({ where: { serieId: s.id }, attributes: ['teacherId'] });
+          const contagem = {};
+          turmas.forEach(t => { if (t.teacherId) contagem[t.teacherId] = (contagem[t.teacherId] || 0) + 1; });
+          const dono = Object.keys(contagem).length ? escolherDono(contagem) : principal;
+          await s.update({ teacherId: dono });
+        }
+        console.log(`Turmas e séries antigas atribuídas aos professores (total: ${semDonoTurmas} turmas, ${semDonoSeries} séries)`);
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao atribuir dono a turmas/séries:', e.message);
   }
 
   const adminEmail = 'admin@escola.com';

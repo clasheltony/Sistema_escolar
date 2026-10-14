@@ -12,12 +12,13 @@ const BASES_TECNICAS = ['Análises Clínicas', 'Informática'];
 exports.getDashboard = async (req, res) => {
   try {
     const isSecretaria = req.session.role === 'secretaria';
-    const scope = isSecretaria ? {} : { teacherId: req.session.teacherId };
+    const scope = classScope(req);
     const teachers = isSecretaria
       ? await Teacher.findAll({ attributes: ['id', 'name'], order: [['name', 'ASC']] })
       : [];
-    const series = await Serie.findAll({ order: [['name', 'ASC']] });
+    const series = await Serie.findAll({ where: scope, order: [['name', 'ASC']] });
     const turmas = await Turma.findAll({
+      where: scope,
       include: [{ model: Serie, attributes: ['id', 'name', 'color'] }],
       order: [['name', 'ASC']]
     });
@@ -51,7 +52,11 @@ exports.createClass = async (req, res) => {
   try {
     const { turmaName, subject, baseTecnica } = req.body;
     const teacherId = req.session.role === 'secretaria' ? (req.body.teacherId || null) : req.session.teacherId;
-    const [turma] = await Turma.findOrCreate({ where: { name: turmaName }, defaults: { name: turmaName } });
+    // A turma pertence ao professor dono da turma-com-disciplina.
+    const [turma] = await Turma.findOrCreate({
+      where: { name: turmaName, teacherId },
+      defaults: { name: turmaName, teacherId }
+    });
     await Class.create({ name: turma.name, turmaId: turma.id, subject, baseTecnica: baseTecnica || null, teacherId });
     res.redirect('/dashboard');
   } catch (err) {
@@ -80,8 +85,13 @@ exports.updateClass = async (req, res) => {
     const { turmaName, subject, baseTecnica } = req.body;
     const where = req.session.role === 'secretaria' ? { id } : { id, teacherId: req.session.teacherId };
     const updateData = { subject: subject || null, baseTecnica: baseTecnica || null };
+    const classe = await Class.findOne({ where });
+    if (!classe) return res.status(404).send('Turma não encontrada');
     if (turmaName) {
-      const [turma] = await Turma.findOrCreate({ where: { name: turmaName }, defaults: { name: turmaName } });
+      const [turma] = await Turma.findOrCreate({
+        where: { name: turmaName, teacherId: classe.teacherId },
+        defaults: { name: turmaName, teacherId: classe.teacherId }
+      });
       updateData.name = turma.name;
       updateData.turmaId = turma.id;
     }
@@ -103,7 +113,8 @@ exports.duplicateClass = async (req, res) => {
     const originalClass = await Class.findOne({ where });
     if (!originalClass) return res.status(404).send('Turma não encontrada');
 
-    const turma = await Turma.findByPk(turmaId);
+    // A turma de destino precisa pertencer ao mesmo professor.
+    const turma = await Turma.findOne({ where: { id: turmaId, teacherId } });
     if (!turma) return res.status(400).send('Turma não encontrada');
 
     const newClass = await Class.create({
@@ -161,7 +172,7 @@ exports.getClassDetails = async (req, res) => {
 exports.createTurma = async (req, res) => {
   try {
     const { name, serieId } = req.body;
-    await Turma.create({ name, serieId: serieId || null });
+    await Turma.create({ name, serieId: serieId || null, teacherId: req.session.teacherId });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);
@@ -173,7 +184,7 @@ exports.updateTurma = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, serieId } = req.body;
-    await Turma.update({ name, serieId: serieId || null }, { where: { id } });
+    await Turma.update({ name, serieId: serieId || null }, { where: { id, ...classScope(req) } });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);
@@ -184,8 +195,11 @@ exports.updateTurma = async (req, res) => {
 exports.deleteTurma = async (req, res) => {
   try {
     const { id } = req.params;
-    await Class.update({ turmaId: null }, { where: { turmaId: id } });
-    await Turma.destroy({ where: { id } });
+    const scope = classScope(req);
+    const turma = await Turma.findOne({ where: { id, ...scope } });
+    if (!turma) return res.status(404).send('Turma não encontrada');
+    await Class.update({ turmaId: null }, { where: { turmaId: id, ...scope } });
+    await Turma.destroy({ where: { id, ...scope } });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);
@@ -196,7 +210,7 @@ exports.deleteTurma = async (req, res) => {
 exports.createSerie = async (req, res) => {
   try {
     const { name, color } = req.body;
-    await Serie.create({ name, color: color || null });
+    await Serie.create({ name, color: color || null, teacherId: req.session.teacherId });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);
@@ -207,11 +221,14 @@ exports.createSerie = async (req, res) => {
 exports.deleteSerie = async (req, res) => {
   try {
     const { id } = req.params;
-    const turmaCount = await Turma.count({ where: { serieId: id } });
+    const scope = classScope(req);
+    const serie = await Serie.findOne({ where: { id, ...scope } });
+    if (!serie) return res.status(404).send('Série não encontrada');
+    const turmaCount = await Turma.count({ where: { serieId: id, ...scope } });
     if (turmaCount > 0) {
       return res.status(400).send('Não é possível excluir: existem turmas vinculadas a esta série');
     }
-    await Serie.destroy({ where: { id } });
+    await Serie.destroy({ where: { id, ...scope } });
     res.redirect('/dashboard');
   } catch (err) {
     console.error(err);

@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
     serieId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    teacherId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
   return Turma;
