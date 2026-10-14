@@ -182,19 +182,25 @@ A nova senha precisa ter ao menos **6 caracteres**.
 
 > Contas criadas pela secretaria/admin (`scripts/create_user.js`) e contas antigas já nascem **confirmadas**.
 
-### Configurar o envio de e-mail (Gmail)
-1. Ative a **verificação em duas etapas** na conta Google
-2. Gere uma **senha de app** em <https://myaccount.google.com/apppasswords>
-3. No `.env`, preencha e descomente:
+### Configurar o envio de e-mail (Brevo — recomendado)
+
+> ⚠️ **O Render (plano grátis) bloqueia SMTP** (portas 25/465/587). Por isso, em
+> produção o envio por **SMTP/Gmail não funciona** — use uma **API HTTPS** (Brevo
+> ou SendGrid), que usa a porta 443 (liberada).
+
+1. Crie uma conta grátis no [Brevo](https://brevo.com) (~300 e-mails/dia)
+2. Em **Senders**, verifique um remetente (ex.: seu e-mail)
+3. Em **SMTP & API → API Keys**, gere a chave
+4. No `.env` (e no Render → Environment):
    ```env
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=465
-   SMTP_SECURE=true
-   SMTP_USER=seuemail@gmail.com
-   SMTP_PASS=sua_senha_de_app
-   MAIL_FROM="Sistema Escolar <seuemail@gmail.com>"
+   BREVO_API_KEY=sua_api_key_do_brevo
+   MAIL_FROM="Sistema Escolar <seuemailverificado@gmail.com>"
    ```
-4. Sem essas variáveis, o sistema entra em **modo dev**: em vez de enviar, imprime o e-mail e o link no console.
+
+**Alternativas:**
+- **SendGrid** (grátis ~100/dia): defina `SENDGRID_API_KEY`.
+- **SMTP** (`SMTP_*`): funciona **localmente**; no Render grátis **não funciona**.
+- **Nenhuma**: modo dev (imprime o e-mail e o link no console).
 
 > 🔒 Os tokens ficam no banco apenas como **hash (sha256)** — nunca em texto puro.
 
@@ -328,15 +334,11 @@ SESSION_SECRET=chave_secreta              # Recomendada em produção
 PORT=3000                                  # Porta do servidor (opcional)
 
 APP_URL=https://seu-app.onrender.com       # URL pública (links dos e-mails)
-SMTP_HOST=smtp.gmail.com                   # Envio de e-mail (Gmail - senha de app)
-SMTP_PORT=465
-SMTP_SECURE=true
-SMTP_USER=seuemail@gmail.com
-SMTP_PASS=sua_senha_de_app
-MAIL_FROM="Sistema Escolar <seuemail@gmail.com>"
+BREVO_API_KEY=sua_api_key                  # Envio de e-mail por API HTTPS (Brevo)
+MAIL_FROM="Sistema Escolar <seuemailverificado@gmail.com>"
 ```
 
-> Sem as variáveis `SMTP_*`, o sistema funciona em **modo dev** (imprime os e-mails no console). Defina `APP_URL` no Render para os links apontarem para o site.
+> Sem provedor de e-mail configurado, o sistema funciona em **modo dev** (imprime os e-mails no console). Defina `APP_URL` no Render para os links apontarem para o site.
 
 ### Tema escuro
 Clique no ícone de sol/lua no navbar para alternar entre tema claro e escuro. A preferência fica salva no navegador.

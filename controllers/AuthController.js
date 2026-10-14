@@ -59,6 +59,18 @@ function resetEmail(name, link) {
 const EXT = 24 * 60 * 60 * 1000; // 24h em ms
 const ONE_HOUR = 60 * 60 * 1000;
 
+// Tenta enviar o e-mail. Se falhar, registra no log e devolve false, para que o
+// cadastro/fluxo nao quebre por causa de um problema de envio.
+async function trySend(payload) {
+  try {
+    await sendMail(payload);
+    return true;
+  } catch (err) {
+    console.error('Falha ao enviar e-mail:', err.message);
+    return false;
+  }
+}
+
 exports.getLogin = (req, res) => {
   if (req.session.teacherId) return res.redirect('/dashboard');
   res.render('login', { error: null, success: null });
@@ -130,11 +142,13 @@ exports.postRegister = async (req, res) => {
         existing.emailVerificationToken = hashToken(token);
         existing.emailVerificationExpires = new Date(Date.now() + EXT);
         await existing.save();
-        await sendMail({
+        const sent = await trySend({
           to: email,
           ...verificationEmail(existing.name, `${baseUrl(req)}/verify-email/${token}`)
         });
-        return render(null, 'Este e-mail já está cadastrado mas ainda não foi confirmado. Enviamos um novo link de confirmação.');
+        return render(null, sent
+          ? 'Este e-mail já está cadastrado mas ainda não foi confirmado. Enviamos um novo link de confirmação.'
+          : 'Não conseguimos enviar o e-mail de confirmação agora. Tente novamente em alguns minutos.');
       }
       return render('Este e-mail já está cadastrado.', null);
     }
@@ -150,12 +164,14 @@ exports.postRegister = async (req, res) => {
       emailVerificationExpires: new Date(Date.now() + EXT)
     });
 
-    await sendMail({
+    const sent = await trySend({
       to: email,
       ...verificationEmail(name, `${baseUrl(req)}/verify-email/${token}`)
     });
 
-    return render(null, `Cadastro realizado! Enviamos um link de confirmação para ${email}. Confirme para poder entrar.`);
+    return render(null, sent
+      ? `Cadastro realizado! Enviamos um link de confirmação para ${email}. Confirme para poder entrar.`
+      : 'Conta criada, mas não conseguimos enviar o e-mail de confirmação agora. Tente se cadastrar novamente em alguns minutos para reenviar o link.');
   } catch (error) {
     console.error('Erro no cadastro:', error);
     return render('Erro interno no servidor. Tente novamente.', null);
@@ -221,7 +237,7 @@ exports.postForgotPassword = async (req, res) => {
       teacher.resetPasswordToken = hashToken(token);
       teacher.resetPasswordExpires = new Date(Date.now() + ONE_HOUR);
       await teacher.save();
-      await sendMail({
+      await trySend({
         to: email,
         ...resetEmail(teacher.name, `${baseUrl(req)}/reset-password/${token}`)
       });
