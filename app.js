@@ -5,6 +5,7 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const { sequelize, Teacher, Serie, Turma, Class } = require('./models');
 const routes = require('./routes');
+const flash = require('./middleware/flash');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
+app.use(flash);
 
 app.use('/', routes);
 
@@ -40,6 +42,21 @@ sequelize.sync().then(async () => {
     await sequelize.query(`ALTER TABLE "Turmas" ADD COLUMN "serieId" TEXT REFERENCES "Series"("id");`);
     console.log('Coluna serieId adicionada');
   } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
+
+  // Colunas para confirmacao de e-mail e redefinicao de senha.
+  const teacherColumns = [
+    [`ALTER TABLE "Teachers" ADD COLUMN "emailVerified" BOOLEAN NOT NULL DEFAULT TRUE;`, 'Coluna emailVerified adicionada'],
+    [`ALTER TABLE "Teachers" ADD COLUMN "emailVerificationToken" TEXT;`, 'Coluna emailVerificationToken adicionada'],
+    [`ALTER TABLE "Teachers" ADD COLUMN "emailVerificationExpires" TIMESTAMP WITH TIME ZONE;`, 'Coluna emailVerificationExpires adicionada'],
+    [`ALTER TABLE "Teachers" ADD COLUMN "resetPasswordToken" TEXT;`, 'Coluna resetPasswordToken adicionada'],
+    [`ALTER TABLE "Teachers" ADD COLUMN "resetPasswordExpires" TIMESTAMP WITH TIME ZONE;`, 'Coluna resetPasswordExpires adicionada']
+  ];
+  for (const [sql, okMsg] of teacherColumns) {
+    try {
+      await sequelize.query(sql);
+      console.log(okMsg);
+    } catch (e) { if (!e.message.includes('duplicate column') && !e.message.includes('already exists')) console.error(e.message); }
+  }
 
   const classCount = await Class.count();
   if (classCount > 0) {

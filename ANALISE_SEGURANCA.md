@@ -17,6 +17,17 @@ _Data: 06/10/2026 · Repo: github.com/clasheltony/Sistema_escolar (público)_
 > Render/redes IPv4. Verificado: o banco respondeu com 6 professores, 18 classes,
 > 359 alunos, 7.964 chamadas e 2.996 notas; **0 turmas sem `teacherId`** (logo o
 > escopo de dono da Fase 4 não esconde dados).
+>
+> **Atualização (recursos de senha/e-mail):** foi **reaberto o cadastro público**
+> (`/register`), o que **reintroduz** o vetor do §C4/C5 — porém agora **mitigado**:
+> a conta nasce com `emailVerified = false` e **não consegue entrar** até confirmar
+> o e-mail; o `role` de auto-registro é fixo em `professor` (não aceita
+> `secretaria`). Também foram adicionados: alteração de senha em Configurações,
+> "esqueci a senha" com link por e-mail (token com validade de 1h) e confirmação
+> de cadastro (24h). Os tokens são guardados **apenas como hash sha256**. Envio via
+> SMTP (Gmail + senha de app) por variáveis de ambiente; sem elas, modo dev
+> (imprime o link no console). **Recomendações:** habilitar rate-limit nos
+> endpoints de login/cadastro/recuperação e usar um e-mail dedicado (não pessoal).
 
 ---
 

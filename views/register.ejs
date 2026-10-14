@@ -1,0 +1,45 @@
+<%- include('header') %>
+
+<div class="row justify-content-center mt-5">
+  <div class="col-md-6">
+    <div class="card p-4">
+      <div class="text-center mb-4">
+        <h2 class="text-primary"><i class="bi bi-person-plus-fill"></i></h2>
+        <h4>Criar conta</h4>
+        <p class="text-muted">Preencha os dados para se cadastrar</p>
+      </div>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div class="alert alert-success"><%= success %></div>
+      <% } %>
+
+      <form action="/register" method="POST">
+        <div class="mb-3">
+          <label class="form-label">Nome completo</label>
+          <input type="text" name="name" class="form-control" required placeholder="Seu nome">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">E-mail</label>
+          <input type="email" name="email" class="form-control" required placeholder="seu@email.com">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Senha</label>
+          <input type="password" name="password" class="form-control" required minlength="6" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Confirmar senha</label>
+          <input type="password" name="confirmPassword" class="form-control" required minlength="6" placeholder="Repita a senha">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+      </form>
+
+      <hr>
+      <p class="text-center mb-0">Já tem conta? <a href="/login">Entrar</a></p>
+    </div>
+  </div>
+</div>
+
+<%- include('footer') %>

@@ -5,6 +5,27 @@
   <h2>Configurações</h2>
 </div>
 
+<div class="card p-4 shadow-sm mb-4">
+  <h4 class="mb-3">Alterar senha</h4>
+  <form action="/settings/password" method="POST">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Senha atual</label>
+        <input type="password" name="currentPassword" class="form-control" required autocomplete="current-password">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Nova senha</label>
+        <input type="password" name="newPassword" class="form-control" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Confirmar nova senha</label>
+        <input type="password" name="confirmPassword" class="form-control" required minlength="6" autocomplete="new-password">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Salvar nova senha</button>
+  </form>
+</div>
+
 <% if (isSecretaria) { %>
   <div class="card p-3 shadow-sm mb-4">
     <form method="GET" action="/settings" class="d-flex align-items-center gap-2">

@@ -25,7 +25,19 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         isIn: [['professor', 'secretaria']]
       }
-    }
+    },
+    // Contas criadas pela secretaria/admin e contas antigas ja nascem verificadas.
+    // Cadastros publicos sao criados com emailVerified = false.
+    emailVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
+    },
+    // Guardamos apenas o hash (sha256) dos tokens, nunca o valor puro.
+    emailVerificationToken: { type: DataTypes.STRING, allowNull: true },
+    emailVerificationExpires: { type: DataTypes.DATE, allowNull: true },
+    resetPasswordToken: { type: DataTypes.STRING, allowNull: true },
+    resetPasswordExpires: { type: DataTypes.DATE, allowNull: true }
   });
   return Teacher;
 };

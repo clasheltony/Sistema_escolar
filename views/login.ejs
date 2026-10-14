@@ -9,8 +9,11 @@
         <p class="text-muted">Acesse sua conta para continuar</p>
       </div>
 
-      <% if (error) { %>
+      <% if (typeof error !== 'undefined' && error) { %>
         <div class="alert alert-danger"><%= error %></div>
+      <% } %>
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div class="alert alert-success"><%= success %></div>
       <% } %>
 
       <form action="/login" method="POST">
@@ -24,6 +27,11 @@
         </div>
         <button type="submit" class="btn btn-primary w-100">Entrar</button>
       </form>
+
+      <div class="d-flex justify-content-between mt-3">
+        <a href="/forgot-password" class="text-decoration-none small">Esqueci minha senha</a>
+        <a href="/register" class="text-decoration-none small">Criar conta</a>
+      </div>
     </div>
   </div>
 </div>

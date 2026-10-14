@@ -32,8 +32,11 @@ Acesse: `http://localhost:3000`
 | Professor Admin | admin@escola.com | admin123 | Apenas suas turmas |
 | Secretaria | secretaria@escola.com | admin123 | Todas as turmas de todos os professores |
 
-Professores e a secretaria são cadastrados pelo administrador:
-`node scripts/create_user.js "<nome>" "<email>" "<senha>" [professor|secretaria]`
+Novas contas de professor podem ser criadas de duas formas:
+- **Pelo próprio usuário** em `/register` (exige confirmação por e-mail antes de entrar)
+- **Pelo administrador**: `node scripts/create_user.js "<nome>" "<email>" "<senha>" [professor|secretaria]` (já nasce confirmada)
+
+A conta de **Secretaria** deve ser criada pelo administrador.
 
 ---
 
@@ -81,19 +84,26 @@ sistema_escolar/
 │   └── Bimester.js           # Bimestre
 │
 ├── middleware/
-│   └── auth.js               # Autenticação + escopo por professor (anti-IDOR)
+│   ├── auth.js               # Autenticação + escopo por professor (anti-IDOR)
+│   └── flash.js              # Mensagens temporárias (ex.: "senha alterada")
+│
+├── services/
+│   └── mailer.js             # Envio de e-mails (confirmação/redefinição de senha)
+│
+├── utils/
+│   └── tokens.js             # Geração e hash (sha256) dos tokens
 │
 ├── controllers/
-│   ├── AuthController.js     # Login/Logout
+│   ├── AuthController.js     # Login, cadastro, confirmação de e-mail e senhas
 │   ├── ClassController.js    # CRUD turmas + dashboard
 │   ├── StudentController.js  # CRUD alunos + transferência
 │   ├── ActivityController.js # Chamadas + Notas
 │   ├── ReportController.js   # Relatórios consolidados
-│   └── SettingsController.js # Configuração de bimestres
+│   └── SettingsController.js # Configurações: bimestres + troca de senha
 │
 ├── routes/
 │   ├── index.js              # Centralizador de rotas
-│   ├── auth.js               # Rotas de autenticação
+│   ├── auth.js               # Login/logout + cadastro + confirmação + senha
 │   ├── classes.js            # Rotas de turmas
 │   ├── students.js           # Rotas de alunos
 │   ├── activities.js         # Rotas de chamadas/notas
@@ -104,16 +114,20 @@ sistema_escolar/
 │   └── create_user.js        # Cria usuários (professor | secretaria)
 │
 └── views/
-    ├── header.ejs            # Layout principal (navbar)
+    ├── header.ejs            # Layout principal (navbar + mensagens)
     ├── footer.ejs            # Scripts JS (tema)
-    ├── layout.ejs            # Layout alternativo
-    ├── login.ejs             # Tela de login
+    ├── layout.ejs            # Layout alternativo (não usado)
+    ├── login.ejs             # Login (com "esqueci a senha" e "criar conta")
+    ├── register.ejs          # Cadastro público
+    ├── forgot_password.ejs   # Solicitar redefinição de senha
+    ├── reset_password.ejs    # Definir nova senha
+    ├── message.ejs           # Aviso (ex.: e-mail confirmado)
     ├── dashboard.ejs         # Dashboard de turmas
     ├── class_details.ejs     # Detalhes da turma
     ├── activities.ejs        # Chamadas e notas
     ├── report.ejs            # Relatório geral
     ├── recuperacao_report.ejs # Relatório de recuperação
-    └── settings.ejs          # Configuração de bimestres
+    └── settings.ejs          # Configurações (bimestres + senha)
 ```
 
 ---
@@ -147,6 +161,45 @@ No painel do Supabase: **Connect → Transaction pooler** (porta `6543`).
 
 ---
 
+## 🔑 Senhas e e-mail
+
+### Alterar a própria senha
+Em **Configurações** existe o cartão **Alterar senha** (senha atual + nova senha + confirmação).
+A nova senha precisa ter ao menos **6 caracteres**.
+
+### Esqueci a senha (na tela de login)
+1. Em `/login`, clique em **Esqueci minha senha**
+2. Informe o e-mail → o sistema envia um link válido por **1 hora**
+3. No link, defina a nova senha
+
+> Por segurança, a mensagem é sempre genérica ("se este e-mail estiver cadastrado…") — não revela se a conta existe.
+
+### Cadastro público com confirmação de e-mail
+1. Em `/login`, clique em **Criar conta** e preencha os dados
+2. A conta é criada como **não confirmada** e um link é enviado (válido por **24 horas**)
+3. Só depois de clicar no link a pessoa consegue entrar
+4. Se tentar se cadastrar de novo com o mesmo e-mail, um **novo link é reenviado**
+
+> Contas criadas pela secretaria/admin (`scripts/create_user.js`) e contas antigas já nascem **confirmadas**.
+
+### Configurar o envio de e-mail (Gmail)
+1. Ative a **verificação em duas etapas** na conta Google
+2. Gere uma **senha de app** em <https://myaccount.google.com/apppasswords>
+3. No `.env`, preencha e descomente:
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=465
+   SMTP_SECURE=true
+   SMTP_USER=seuemail@gmail.com
+   SMTP_PASS=sua_senha_de_app
+   MAIL_FROM="Sistema Escolar <seuemail@gmail.com>"
+   ```
+4. Sem essas variáveis, o sistema entra em **modo dev**: em vez de enviar, imprime o e-mail e o link no console.
+
+> 🔒 Os tokens ficam no banco apenas como **hash (sha256)** — nunca em texto puro.
+
+---
+
 ## 👑 Papel da Secretaria
 
 ### O que a Secretaria pode fazer
@@ -175,6 +228,11 @@ No painel do Supabase: **Connect → Transaction pooler** (porta `6543`).
 | email | STRING (unique) | Email de login |
 | password | STRING | Senha criptografada (bcrypt) |
 | role | STRING | 'professor' ou 'secretaria' |
+| emailVerified | BOOLEAN | Se o e-mail já foi confirmado (padrão: true) |
+| emailVerificationToken | STRING | Hash do token de confirmação (temporário) |
+| emailVerificationExpires | DATE | Expiração do token de confirmação |
+| resetPasswordToken | STRING | Hash do token de redefinição (temporário) |
+| resetPasswordExpires | DATE | Expiração do token de redefinição |
 
 ### Class (Turma)
 | Campo | Tipo | Descrição |
@@ -254,8 +312,9 @@ O sistema usa `console.log` para registrar eventos importantes no terminal.
 3. O script baixa as dependências automaticamente na primeira execução
 
 ### Contas
-- O cadastro público está desativado; as contas são criadas pelo administrador com `scripts/create_user.js`
+- **Cadastro público** disponível em `/register` (com confirmação por e-mail) e criação pelo administrador via `scripts/create_user.js`
 - A secretaria tem a conta fixa `secretaria@escola.com`
+- Cada usuário pode **alterar a própria senha** em Configurações e recuperá-la por e-mail na tela de login
 - Os dados de cada professor ficam isolados automaticamente pelo `teacherId`
 
 ---
@@ -267,7 +326,17 @@ O sistema usa `console.log` para registrar eventos importantes no terminal.
 DATABASE_URL=postgresql://...              # OBRIGATÓRIA — banco na nuvem (Supabase)
 SESSION_SECRET=chave_secreta              # Recomendada em produção
 PORT=3000                                  # Porta do servidor (opcional)
+
+APP_URL=https://seu-app.onrender.com       # URL pública (links dos e-mails)
+SMTP_HOST=smtp.gmail.com                   # Envio de e-mail (Gmail - senha de app)
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=seuemail@gmail.com
+SMTP_PASS=sua_senha_de_app
+MAIL_FROM="Sistema Escolar <seuemail@gmail.com>"
 ```
+
+> Sem as variáveis `SMTP_*`, o sistema funciona em **modo dev** (imprime os e-mails no console). Defina `APP_URL` no Render para os links apontarem para o site.
 
 ### Tema escuro
 Clique no ícone de sol/lua no navbar para alternar entre tema claro e escuro. A preferência fica salva no navegador.

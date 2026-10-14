@@ -1,3 +1,4 @@
+const bcrypt = require('bcrypt');
 const { Bimester, Teacher } = require('../models');
 
 exports.getSettings = async (req, res) => {
@@ -32,10 +33,45 @@ exports.getSettings = async (req, res) => {
       }
     }
 
-    res.render('settings', { teacherName: req.session.teacherName, bimesters, teachers, selectedTeacherId, isSecretaria });
+    res.render('settings', { teacherName: req.session.teacherName, role: req.session.role, bimesters, teachers, selectedTeacherId, isSecretaria });
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao carregar configurações');
+  }
+};
+
+exports.updatePassword = async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  try {
+    const teacher = await Teacher.findByPk(req.session.teacherId);
+    if (!teacher) {
+      return res.redirect('/login');
+    }
+
+    const match = await bcrypt.compare(currentPassword || '', teacher.password);
+    if (!match) {
+      req.session.flash = { type: 'danger', text: 'Senha atual incorreta.' };
+      return res.redirect('/settings');
+    }
+    if (!newPassword || newPassword.length < 6) {
+      req.session.flash = { type: 'danger', text: 'A nova senha deve ter pelo menos 6 caracteres.' };
+      return res.redirect('/settings');
+    }
+    if (newPassword !== confirmPassword) {
+      req.session.flash = { type: 'danger', text: 'A confirmação não confere com a nova senha.' };
+      return res.redirect('/settings');
+    }
+
+    teacher.password = await bcrypt.hash(newPassword, 10);
+    await teacher.save();
+
+    req.session.flash = { type: 'success', text: 'Senha alterada com sucesso.' };
+    return res.redirect('/settings');
+  } catch (err) {
+    console.error('Erro ao alterar senha:', err);
+    req.session.flash = { type: 'danger', text: 'Erro ao alterar a senha. Tente novamente.' };
+    return res.redirect('/settings');
   }
 };
 
